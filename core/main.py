@@ -8,6 +8,8 @@ from logging import Logger, NOTSET
 
 from .helpers import network
 
+from .modules import updater
+
 __version__ = "0.0.1"
 
 MQTT_HOST = "35.199.1.61"
@@ -83,6 +85,7 @@ class Agent(object):
         payload = msg.payload.decode()
 
         is_connection_status_message = topic == "connected"
+        is_directive_message = topic == "directives"
 
         if is_connection_status_message and payload == "0":
             logger.warning(
@@ -91,6 +94,19 @@ class Agent(object):
             self.client.publish(f"device/{self.token}/connected", 1, retain=True)
 
             return
+
+        elif is_directive_message:
+            command = payload.get("command", None)
+            data = payload.get("data", {})
+
+            if not command:
+                logger.warning("I got a directive message without command property, I'm skipping.")
+                return
+
+            if command == "update":
+                updater.main(self.client, self.configs)
+
+            
 
     def __on_connect(self, client, userdata, flags, rc):
         print("Connected to the server")
