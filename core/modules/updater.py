@@ -4,12 +4,12 @@ from json import dumps
 def _update_status(mqtt_client, configs, status):
     mqtt_client.publish(
         f"device/{configs['token']}/hive", 
-        {
+        dumps({
             "command": "update",
             "data": {
                 "status": status
             } 
-        }
+        })
     )
 
 

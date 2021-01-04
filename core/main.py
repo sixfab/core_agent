@@ -96,6 +96,12 @@ class Agent(object):
             return
 
         elif is_directive_message:
+            try:
+                payload = json.loads(payload)
+            except:
+                logger.error("Directive message's boddy is not valid json, skipping.")
+                return
+
             command = payload.get("command", None)
             data = payload.get("data", {})
 
@@ -103,8 +109,9 @@ class Agent(object):
                 logger.warning("I got a directive message without command property, I'm skipping.")
                 return
 
-            if command == "update":
-                updater.main(self.client, self.configs)
+            if command == "update": 
+                Thread(target=updater.main, args=(self.client, self.configs)).start()
+
 
             
 
