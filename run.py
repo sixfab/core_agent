@@ -3,7 +3,7 @@ import yaml
 
 
 try:
-    with open("/home/sixfab/env") as env_file:
+    with open("/opt/sixfab/.env.yaml") as env_file:
         configs = yaml.safe_load(env_file)
 except:
     configs = {}
