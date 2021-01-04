@@ -25,8 +25,8 @@ class Agent(object):
     ):
         client = mqtt.Client(client_id=f"device/{uuid4().hex}")
         self.client = client
-        self.token = configs["token"]
-        self.configs = configs
+        self.configs = configs["connect"]
+        self.token = self.configs["token"]
         self.is_connected = False
 
         self.lock_thread = Lock()
