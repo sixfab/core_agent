@@ -6,14 +6,13 @@ from uuid import uuid4
 from threading import Thread, Lock
 from logging import Logger, NOTSET
 
-from .helpers import network
+from .helpers import network, logger
+from .modules import monitoring
 
 __version__ = "0.0.1"
 
 MQTT_HOST = "35.199.1.61"
 MQTT_PORT = 1883
-
-logger = Logger(__name__, level=NOTSET)
 
 
 class Agent(object):
@@ -27,7 +26,10 @@ class Agent(object):
         self.client = client
         self.configs = configs["connect"]
         self.token = self.configs["token"]
+        self.logger = logger.initialize_logger()
+        self.configs["logger"] = self.logger
         self.is_connected = False
+        self.monitoring_initialized = False
 
         self.lock_thread = Lock()
 
@@ -56,7 +58,7 @@ class Agent(object):
                     ping_host = network.get_host_by_addr(ping_addr)
 
                 if not self.is_connected:
-                    logger.debug("[LOOP] Network online, starting mqtt agent")
+                    self.logger.debug("[LOOP] Network online, starting mqtt agent")
                     self.client.connect(
                         self.configs.get("MQTT_HOST", MQTT_HOST),
                         MQTT_PORT,
@@ -72,7 +74,7 @@ class Agent(object):
                     continue
 
                 if self.is_connected:
-                    logger.debug("[LOOP] Network ofline, blocking mqtt agent")
+                    self.logger.debug("[LOOP] Network ofline, blocking mqtt agent")
                     self.is_connected = False
                     self.client.loop_stop()
                     self.client.disconnect()
@@ -85,7 +87,7 @@ class Agent(object):
         is_connection_status_message = topic == "connected"
 
         if is_connection_status_message and payload == "0":
-            logger.warning(
+            self.logger.warning(
                 "[CONNECTION] The broker assuming I'm offline, I'm updating my status"
             )
             self.client.publish(f"device/{self.token}/connected", 1, retain=True)
@@ -95,6 +97,10 @@ class Agent(object):
     def __on_connect(self, client, userdata, flags, rc):
         print("Connected to the server")
         self.is_connected = True
+
+        if not self.monitoring_initialized:
+            Thread(target=monitoring.main, args=(self.client, self.configs)).start()
+            self.monitoring_initialized = True
 
         self.client.subscribe(f"device/{self.token}/directives")
         self.client.subscribe(f"device/{self.token}/connected")
