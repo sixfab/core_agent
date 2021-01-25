@@ -6,9 +6,9 @@ import logging.handlers
 def initialize_logger():
     homedir = os.path.expanduser("~")
     required_paths = [
-        homedir+"/sixfab",
-        homedir+"/sixfab/connect",
-        homedir+"/sixfab/connect/logs",
+        homedir+"/.sixfab",
+        homedir+"/.sixfab/connect",
+        homedir+"/.sixfab/connect/logs",
     ]
 
     for path in required_paths:
