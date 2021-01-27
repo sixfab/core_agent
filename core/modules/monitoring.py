@@ -31,10 +31,9 @@ def main(mqttClient, configs):
             data_to_send = {}
 
             for key, value in new_monitoring_data.items():
-                if key not in last_monitoring_data:
-                    data_to_send[key] = value
+                last_value = last_monitoring_data.get(key, "N/A")
 
-                elif last_monitoring_data[key] != value:
+                if value != last_value:
                     data_to_send[key] = value
 
 
@@ -44,9 +43,9 @@ def main(mqttClient, configs):
                     data=data_to_send
                 )))
 
-                logger.info("Sending new monitoring data")
+                logger.debug("Sending new monitoring data")
             else:
-                logger.info("Skipping monitoring data, couldn't find any changes.")
+                logger.debug("Skipping monitoring data, couldn't find any changes.")
 
             last_monitoring_data.update(new_monitoring_data)
 
@@ -66,10 +65,9 @@ def main(mqttClient, configs):
             data_to_send = {}
     
             for key, value in new_system_data.items():
-                if key not in last_system_data:
-                    data_to_send[key] = value
-    
-                elif last_system_data[key] != value:
+                last_value = last_system_data.get(key, "N/A")
+
+                if value != last_value:
                     data_to_send[key] = value
     
     
@@ -79,9 +77,9 @@ def main(mqttClient, configs):
                     data=data_to_send
                 )))
     
-                logger.info("Sending new system data")
+                logger.debug("Sending new system data")
             else:
-                logger.info("Skipping system data, couldn't find any changes.")
+                logger.debug("Skipping system data, couldn't find any changes.")
     
             last_system_data.update(new_system_data)
 
