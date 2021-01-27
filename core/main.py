@@ -5,7 +5,9 @@ import paho.mqtt.client as mqtt
 from uuid import uuid4
 from threading import Thread, Lock
 from logging import Logger, NOTSET
+from base64 import b64decode, b64encode
 
+from .modules import pty
 from .helpers import network
 
 __version__ = "0.0.1"
@@ -30,6 +32,7 @@ class Agent(object):
         self.is_connected = False
 
         self.lock_thread = Lock()
+        self.terminal = pty.PTYController(self.configs)
 
         client.username_pw_set(self.token, "sixfab")
         client.user_data_set(self.token)
@@ -83,6 +86,21 @@ class Agent(object):
         payload = msg.payload.decode()
 
         is_connection_status_message = topic == "connected"
+        is_signaling_message = msg.topic.startswith("signaling")
+
+
+        if is_signaling_message:
+            logger.debug("[SIGNALING] Got request, creating response")
+
+            answer = self.terminal.request(b64decode(payload))
+
+            client.publish(
+                f"signaling/{self.token}/response",
+                b64encode(answer),
+            )
+
+            logger.debug("[SIGNALING] Sent response")
+
 
         if is_connection_status_message and payload == "0":
             logger.warning(
@@ -98,6 +116,7 @@ class Agent(object):
 
         self.client.subscribe(f"device/{self.token}/directives")
         self.client.subscribe(f"device/{self.token}/connected")
+        self.client.subscribe(f"signaling/{self.token}/request")
         self.client.publish(
             f"device/{self.token}/connected",
             1,
