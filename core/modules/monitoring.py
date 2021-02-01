@@ -55,6 +55,8 @@ def main(mqttClient, configs):
                     data_to_send[key] = value
 
             if data_to_send:
+                data_to_send["timestamp"] = time.time()
+
                 message_body = dict(
                     type="data_monitoring",
                     data=data_to_send
