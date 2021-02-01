@@ -9,12 +9,30 @@ except ImportError:
 
 
 CONTROL_INTERVAL=15
+message_cache = {} # key, value pattern for each mid, message_body
 
 
 def main(mqttClient, configs):
     logger = configs["logger"]
     last_monitoring_data = {}
     last_system_data = {}
+
+    def on_publish(client, userdata, mid):
+        if mid in message_cache:
+            logger.debug("Data sent and recieved by remote, updating local placeholder")
+
+            data = message_cache[mid]
+
+            if data["type"] == "data_monitoring":
+                last_monitoring_data.update(data["data"])
+                logger.debug("Updated last monitoring data")
+
+            elif data["type"] == "data_system":
+                last_system_data.update(data["data"])
+                logger.debug("Updated last system data")
+
+
+    mqttClient.on_publish = on_publish
 
     while True:
 
@@ -31,24 +49,31 @@ def main(mqttClient, configs):
             data_to_send = {}
 
             for key, value in new_monitoring_data.items():
-                if key not in last_monitoring_data:
-                    data_to_send[key] = value
+                last_value = last_monitoring_data.get(key, "N/A")
 
-                elif last_monitoring_data[key] != value:
+                if value != last_value:
                     data_to_send[key] = value
-
 
             if data_to_send:
-                mqttClient.publish(f"device/{configs['token']}/hive", json.dumps(dict(
+                data_to_send["timestamp"] = time.time()
+
+                message_body = dict(
                     type="data_monitoring",
                     data=data_to_send
-                )))
+                )
 
-                logger.info("Sending new monitoring data")
+                message_response = mqttClient.publish(
+                    f"device/{configs['token']}/hive",
+                    json.dumps(message_body),
+                    qos=1
+                )
+
+                message_cache[message_response.mid] = message_body
+
+                logger.debug("Sending new monitoring data")
             else:
-                logger.info("Skipping monitoring data, couldn't find any changes.")
+                logger.debug("Skipping monitoring data, couldn't find any changes.")
 
-            last_monitoring_data.update(new_monitoring_data)
 
 
 
@@ -66,25 +91,29 @@ def main(mqttClient, configs):
             data_to_send = {}
     
             for key, value in new_system_data.items():
-                if key not in last_system_data:
-                    data_to_send[key] = value
-    
-                elif last_system_data[key] != value:
+                last_value = last_system_data.get(key, "N/A")
+
+                if value != last_value:
                     data_to_send[key] = value
     
     
             if data_to_send:
-                mqttClient.publish(f"device/{configs['token']}/hive", json.dumps(dict(
+                message_body = dict(
                     type="data_system",
                     data=data_to_send
-                )))
-    
-                logger.info("Sending new system data")
-            else:
-                logger.info("Skipping system data, couldn't find any changes.")
-    
-            last_system_data.update(new_system_data)
+                )
 
+                message_response = mqttClient.publish(
+                    f"device/{configs['token']}/hive", 
+                    json.dumps(message_body),
+                    qos=1
+                )
+
+                message_cache[message_response.mid] = message_body
+    
+                logger.debug("Sending new system data")
+            else:
+                logger.debug("Skipping system data, couldn't find any changes.")
 
 
         time.sleep(CONTROL_INTERVAL)
