@@ -92,7 +92,7 @@ class Agent(object):
 
 
         if is_signaling_message:
-            logger.debug("[SIGNALING] Got request, creating response")
+            self.logger.debug("[SIGNALING] Got request, creating response")
 
             answer = self.terminal.request(b64decode(payload))
 
@@ -101,7 +101,7 @@ class Agent(object):
                 b64encode(answer),
             )
 
-            logger.debug("[SIGNALING] Sent response")
+            self.logger.debug("[SIGNALING] Sent response")
 
 
         if is_connection_status_message and payload == "0":
