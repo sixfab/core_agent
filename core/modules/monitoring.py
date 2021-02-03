@@ -2,6 +2,8 @@ import yaml
 import json
 import time
 
+from core.__version__ import version
+
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
@@ -24,6 +26,7 @@ def main(mqttClient, configs):
             data = message_cache[mid]
 
             if data["type"] == "data_monitoring":
+                del data["data"]["timestamp"]
                 last_monitoring_data.update(data["data"])
                 logger.debug("Updated last monitoring data")
 
@@ -55,6 +58,8 @@ def main(mqttClient, configs):
                     data_to_send[key] = value
 
             if data_to_send:
+                data_to_send["timestamp"] = time.time()
+
                 message_body = dict(
                     type="data_monitoring",
                     data=data_to_send
@@ -73,9 +78,6 @@ def main(mqttClient, configs):
                 logger.debug("Skipping monitoring data, couldn't find any changes.")
 
 
-
-
-
         # SYSTEM DATA
         new_system_data = None
         try:
@@ -85,6 +87,7 @@ def main(mqttClient, configs):
 
         if new_system_data:
             new_system_data = yaml.load(new_system_data, Loader=Loader)
+            new_system_data["agent_version"] = version
     
             data_to_send = {}
     
