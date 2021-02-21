@@ -9,7 +9,7 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring
+from .modules import monitoring, updater
 
 __version__ = "0.0.1"
 
@@ -89,28 +89,51 @@ class Agent(object):
 
         is_connection_status_message = topic == "connected"
         is_signaling_message = msg.topic.startswith("signaling")
+        is_directive = topic == "directives"
 
 
         if is_signaling_message:
             self.logger.debug("[SIGNALING] Got request, creating response")
 
+            payload = json.loads(payload)
+            requestID = payload["id"]
+            payload = payload["payload"]
+
             answer = self.terminal.request(b64decode(payload))
 
             client.publish(
                 f"signaling/{self.token}/response",
-                b64encode(answer),
+                json.dumps({
+                    "id": requestID,
+                    "payload": b64encode(answer).decode()
+                }),
             )
 
             self.logger.debug("[SIGNALING] Sent response")
 
 
-        if is_connection_status_message and payload == "0":
+        elif is_connection_status_message and payload == "0":
             self.logger.warning(
                 "[CONNECTION] The broker assuming I'm offline, I'm updating my status"
             )
             self.client.publish(f"device/{self.token}/connected", 1, retain=True)
 
             return
+
+        elif is_directive:
+            try:
+                payload = json.loads(payload)
+            except:
+                return
+
+            command = payload.get("command")
+            data = payload.get("data", {})
+
+            if not command:
+                return
+
+            if command == "update":
+                Thread(target=updater.update_modules, args=(self.configs, self.client)).start()
 
     def __on_connect(self, client, userdata, flags, rc):
         print("Connected to the server")
