@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import platform
 import subprocess
@@ -23,6 +24,13 @@ class PTYController:
 
         return
 
+    def is_agent_running(self):
+        try:
+            running_pid = subprocess.check_output(["sudo", "fuser", "8998/tcp"], stderr=subprocess.DEVNULL).decode()
+            return True
+        except:
+            return False
+
 
     def start_agent(self):
         processor_architecture = platform.machine()
@@ -40,7 +48,27 @@ class PTYController:
         if type(data) != bytes:
             data = data.encode()
 
-        response = request.urlopen("http://localhost:8998", data)
-        response = response.read()
+        if not self.is_agent_running():
+            self.start_agent()
+
+        response = None
+
+        try:
+            response = request.urlopen("http://localhost:8998", data)
+            response = response.read()
+
+        except Exception as e:
+            print("="*20)
+            print("re-opening agent")
+
+            self.stop_running_agent()
+            self.start_agent()
+
+            time.sleep(1)
+
+            response = request.urlopen("http://localhost:8998", data)
+            response = response.read()
+
+
 
         return response
