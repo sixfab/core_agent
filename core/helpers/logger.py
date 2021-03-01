@@ -6,16 +6,15 @@ import logging.handlers
 def initialize_logger():
     homedir = os.path.expanduser("~")
     required_paths = [
-        homedir+"/.sixfab",
-        homedir+"/.sixfab/core",
-        homedir+"/.sixfab/core/logs",
+        homedir+"/.core",
+        homedir+"/.core/logs",
     ]
 
     for path in required_paths:
         if not os.path.exists(path):
             os.mkdir(path)
 
-    logging_file_path = os.path.expanduser("~")+"/.sixfab/core/logs/"
+    logging_file_path = os.path.expanduser("~")+"/.core/logs/"
 
     logger = logging.getLogger("agent")
     logger.setLevel(logging.DEBUG)
