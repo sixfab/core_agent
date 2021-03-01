@@ -26,7 +26,7 @@ class Agent(object):
     ):
         client = mqtt.Client(client_id=f"device/{uuid4().hex}")
         self.client = client
-        self.configs = configs["connect"]
+        self.configs = configs["core"]
         self.token = self.configs["token"]
         self.logger = logger.initialize_logger()
         self.configs["logger"] = self.logger
