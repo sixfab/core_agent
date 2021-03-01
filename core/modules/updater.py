@@ -17,7 +17,7 @@ def update_modules(configs, mqtt_client):
 
     send_status("download_agent")
     commands = [
-        "cd /opt/sixfab/connect/agent",
+        "cd /opt/sixfab/core/agent",
         "sudo git reset --hard HEAD",
         "sudo git fetch",
         "sudo git pull",
@@ -30,7 +30,7 @@ def update_modules(configs, mqtt_client):
     logger.info("[UPDATER] Updating manager source")
     send_status("download_manager")
     commands = [
-        "cd /opt/sixfab/connect/manager",
+        "cd /opt/sixfab/core/manager",
         "sudo git reset --hard HEAD",
         "sudo git fetch",
         "sudo git pull",
@@ -43,7 +43,7 @@ def update_modules(configs, mqtt_client):
     logger.info("[UPDATER] Restarting services")
     send_status("restart_services")
     commands = [
-        "sudo systemctl restart connect_manager",
-        "sudo systemctl restart connect_agent"
+        "sudo systemctl restart core_manager",
+        "sudo systemctl restart core_agent"
     ]
     os.system(" && ".join(commands))
