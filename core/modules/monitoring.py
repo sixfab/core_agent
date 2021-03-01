@@ -39,7 +39,7 @@ def main(mqttClient, configs):
         # MONITOR DATA
         new_monitoring_data = None
         try:
-            new_monitoring_data = open("/home/sixfab/.sixfab/connect/monitor.yaml")
+            new_monitoring_data = open("/home/sixfab/.sixfab/core/monitor.yaml")
         except:
             logger.error("Monitoring data not exists!")
 
@@ -81,7 +81,7 @@ def main(mqttClient, configs):
         # SYSTEM DATA
         new_system_data = None
         try:
-            new_system_data = open("/home/sixfab/.sixfab/connect/system.yaml")
+            new_system_data = open("/home/sixfab/.sixfab/core/system.yaml")
         except:
             logger.error("System data not exists!")
 
