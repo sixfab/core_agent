@@ -41,7 +41,7 @@ class Agent(object):
 
         client.will_set(
             "device/{}/connected".format(self.token),
-            0,
+            1,
             retain=True,
         )
 
