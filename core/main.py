@@ -25,6 +25,8 @@ class Agent(object):
         enable_feeder: bool = True,
     ):
         client = mqtt.Client(client_id=f"device/{uuid4().hex}")
+        configs["core"]["callbacks"] = []
+
         self.client = client
         self.configs = configs["core"]
         self.token = self.configs["token"]
@@ -61,6 +63,12 @@ class Agent(object):
 
 
     def __on_message(self, client, userdata, msg):
+        for function in self.configs["callbacks"]:
+            try:
+                function(client, userdata, msg)
+            except:
+                pass
+                
         topic = msg.topic.split("/")[-1]
         payload = msg.payload.decode()
 
