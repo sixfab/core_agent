@@ -1,6 +1,7 @@
 import yaml
 import json
 import time
+from uuid import uuid4
 
 from core.__version__ import version
 
@@ -10,7 +11,7 @@ except ImportError:
     from yaml import Loader, Dumper
 
 
-CONTROL_INTERVAL=15
+CONTROL_INTERVAL=30
 message_cache = {} # key, value pattern for each mid, message_body
 
 
@@ -19,26 +20,40 @@ def main(mqttClient, configs):
     last_monitoring_data = {}
     last_system_data = {}
 
-    def on_publish(client, userdata, mid):
-        if mid in message_cache:
-            logger.debug("Data sent and recieved by remote, updating local placeholder")
 
-            data = message_cache[mid]
+    def callback(client, userdata, msg):
+        topic = msg.topic.split("/")[-1]
+        payload = msg.payload.decode()
 
-            if data["type"] == "data_monitoring":
-                del data["data"]["timestamp"]
-                last_monitoring_data.update(data["data"])
-                logger.debug("Updated last monitoring data")
+        if topic == "directives":
+            try:
+                payload = json.loads(payload)
+            except:
+                return
 
-            elif data["type"] == "data_system":
-                last_system_data.update(data["data"])
-                logger.debug("Updated last system data")
+            if payload.get("command", None) == "ack":
+                mid = payload.get("data")
+
+                if not mid:
+                    return
+
+                data = message_cache[mid]
+
+                if data["type"] == "data_monitoring":
+                    del data["data"]["timestamp"]
+                    last_monitoring_data.update(data["data"])
+                    logger.debug("Updated last monitoring data")
+
+                elif data["type"] == "data_system":
+                    last_system_data.update(data["data"])
+                    logger.debug("Updated last system data")
 
 
-    mqttClient.on_publish = on_publish
+
+    configs["callbacks"].append(callback)
+
 
     while True:
-
         # MONITOR DATA
         new_monitoring_data = None
         try:
@@ -58,20 +73,22 @@ def main(mqttClient, configs):
                     data_to_send[key] = value
 
             if data_to_send:
+                mid = uuid4().hex[-4:]
+
                 data_to_send["timestamp"] = time.time()
 
                 message_body = dict(
                     type="data_monitoring",
-                    data=data_to_send
+                    data=data_to_send,
+                    mid=mid
                 )
 
                 message_response = mqttClient.publish(
                     f"device/{configs['token']}/hive",
-                    json.dumps(message_body),
-                    qos=1
+                    json.dumps(message_body)
                 )
 
-                message_cache[message_response.mid] = message_body
+                message_cache[mid] = message_body
 
                 logger.debug("Sending new monitoring data")
             else:
@@ -99,18 +116,20 @@ def main(mqttClient, configs):
     
     
             if data_to_send:
+                mid = uuid4().hex[-4:]
+
                 message_body = dict(
                     type="data_system",
-                    data=data_to_send
+                    data=data_to_send,
+                    mid=mid
                 )
 
                 message_response = mqttClient.publish(
                     f"device/{configs['token']}/hive", 
-                    json.dumps(message_body),
-                    qos=1
+                    json.dumps(message_body)
                 )
 
-                message_cache[message_response.mid] = message_body
+                message_cache[mid] = message_body
     
                 logger.debug("Sending new system data")
             else:
