@@ -54,11 +54,18 @@ class Agent(object):
         client.on_log = self.__on_log
 
     def loop(self):
-        self.client.connect(
-            self.configs.get("MQTT_HOST", MQTT_HOST),
-            MQTT_PORT,
-            keepalive=30,
-        )
+        while True:
+            try:
+                self.client.connect(
+                    self.configs.get("MQTT_HOST", MQTT_HOST),
+                    MQTT_PORT,
+                    keepalive=30,
+                )
+                break
+            except:
+                self.logger.error("Couldn't connect, retrying in 5 seconds")
+                time.sleep(5)
+
         self.client.loop_forever()
 
 
