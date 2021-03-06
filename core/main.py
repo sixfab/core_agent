@@ -129,6 +129,7 @@ class Agent(object):
 
     def __on_connect(self, client, userdata, flags, rc):
         print("Connected to the server")
+        self.logger.info("Connected to the broker")
         self.is_connected = True
 
         if not self.monitoring_initialized:
@@ -147,6 +148,7 @@ class Agent(object):
 
     def __on_disconnect(self, client, userdata, rc):
         print("Disconnected. Result Code: {rc}".format(rc=rc))
+        self.logger.warning("Disconnected from the broker")
         self.is_connected = False
 
     def __on_log(self, mqttc, userdata, level, string):
