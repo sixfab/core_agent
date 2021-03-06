@@ -54,11 +54,18 @@ class Agent(object):
         client.on_log = self.__on_log
 
     def loop(self):
-        self.client.connect(
-            self.configs.get("MQTT_HOST", MQTT_HOST),
-            MQTT_PORT,
-            keepalive=30,
-        )
+        while True:
+            try:
+                self.client.connect(
+                    self.configs.get("MQTT_HOST", MQTT_HOST),
+                    MQTT_PORT,
+                    keepalive=30,
+                )
+                break
+            except:
+                self.logger.error("Couldn't connect, retrying in 5 seconds")
+                time.sleep(5)
+
         self.client.loop_forever()
 
 
@@ -122,6 +129,7 @@ class Agent(object):
 
     def __on_connect(self, client, userdata, flags, rc):
         print("Connected to the server")
+        self.logger.info("Connected to the broker")
         self.is_connected = True
 
         if not self.monitoring_initialized:
@@ -140,6 +148,7 @@ class Agent(object):
 
     def __on_disconnect(self, client, userdata, rc):
         print("Disconnected. Result Code: {rc}".format(rc=rc))
+        self.logger.warning("Disconnected from the broker")
         self.is_connected = False
 
     def __on_log(self, mqttc, userdata, level, string):
