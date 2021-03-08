@@ -22,6 +22,7 @@ class Agent(object):
         lwt: bool = True,
         enable_feeder: bool = True,
     ):
+        configs["core"]["callbacks"] = []
         self.configs = configs["core"]
         self.token = self.configs["token"]
         self.logger = logger.initialize_logger()
@@ -40,7 +41,8 @@ class Agent(object):
 
         client.will_set(
             "device/{}/connected".format(self.token),
-            1,
+            "0",
+            qos=1,
             retain=True,
         )
 
@@ -50,39 +52,28 @@ class Agent(object):
         client.on_log = self.__on_log
 
     def loop(self):
-        ping_addr = "power.sixfab.com"
-        ping_host = None
-
         while True:
-            if network.is_network_available(ping_host or ping_addr):
+            try:
+                self.client.connect(
+                    self.configs.get("MQTT_HOST", MQTT_HOST),
+                    MQTT_PORT,
+                    keepalive=30,
+                )
+                break
+            except:
+                self.logger.error("Couldn't connect, retrying in 5 seconds")
+                time.sleep(5)
 
-                if not ping_host:
-                    ping_host = network.get_host_by_addr(ping_addr)
+        self.client.loop_forever()
 
-                if not self.is_connected:
-                    self.logger.debug("[LOOP] Network online, starting mqtt agent")
-                    self.client.connect(
-                        self.configs.get("MQTT_HOST", MQTT_HOST),
-                        MQTT_PORT,
-                        keepalive=30,
-                    )
-                    self.client.loop_start()
-                    self.is_connected = True
-
-                time.sleep(30)
-            else:
-                if ping_host:
-                    ping_host = None
-                    continue
-
-                if self.is_connected:
-                    self.logger.debug("[LOOP] Network ofline, blocking mqtt agent")
-                    self.is_connected = False
-                    self.client.loop_stop()
-                    self.client.disconnect()
-                time.sleep(10)
 
     def __on_message(self, client, userdata, msg):
+        for function in self.configs["callbacks"]:
+            try:
+                function(client, userdata, msg)
+            except:
+                pass
+                
         topic = msg.topic.split("/")[-1]
         payload = msg.payload.decode()
 
@@ -136,23 +127,26 @@ class Agent(object):
 
     def __on_connect(self, client, userdata, flags, rc):
         print("Connected to the server")
+        self.logger.info("Connected to the broker")
         self.is_connected = True
 
         if not self.monitoring_initialized:
             Thread(target=monitoring.main, args=(self.client, self.configs)).start()
             self.monitoring_initialized = True
 
-        self.client.subscribe(f"device/{self.token}/directives")
-        self.client.subscribe(f"device/{self.token}/connected")
-        self.client.subscribe(f"signaling/{self.token}/request")
+        self.client.subscribe(f"device/{self.token}/directives", qos=1)
+        self.client.subscribe(f"device/{self.token}/connected", qos=1)
+        self.client.subscribe(f"signaling/{self.token}/request", qos=1)
         self.client.publish(
             f"device/{self.token}/connected",
-            1,
+            "1",
+            qos=1,
             retain=True,
         )
 
     def __on_disconnect(self, client, userdata, rc):
         print("Disconnected. Result Code: {rc}".format(rc=rc))
+        self.logger.warning("Disconnected from the broker")
         self.is_connected = False
 
     def __on_log(self, mqttc, userdata, level, string):
