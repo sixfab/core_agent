@@ -24,10 +24,7 @@ class Agent(object):
         lwt: bool = True,
         enable_feeder: bool = True,
     ):
-        client = mqtt.Client(client_id=f"device/{uuid4().hex}")
         configs["core"]["callbacks"] = []
-
-        self.client = client
         self.configs = configs["core"]
         self.token = self.configs["token"]
         self.logger = logger.initialize_logger()
@@ -38,6 +35,9 @@ class Agent(object):
         self.lock_thread = Lock()
         self.terminal = pty.PTYController(self.configs)
 
+        client = mqtt.Client(client_id=f"device/{self.token}")
+        self.client = client
+        
         client.username_pw_set(self.token, "sixfab")
         client.user_data_set(self.token)
 
