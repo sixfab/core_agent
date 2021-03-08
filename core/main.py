@@ -11,9 +11,7 @@ from .modules import pty
 from .helpers import network, logger
 from .modules import monitoring, updater
 
-__version__ = "0.0.1"
-
-MQTT_HOST = "35.199.1.61"
+MQTT_HOST = "mqtt.connect.sixfab.com"
 MQTT_PORT = 1883
 
 
@@ -36,7 +34,7 @@ class Agent(object):
 
         client = mqtt.Client(client_id=f"device/{self.token}")
         self.client = client
-        
+
         client.username_pw_set(self.token, "sixfab")
         client.user_data_set(self.token)
 
