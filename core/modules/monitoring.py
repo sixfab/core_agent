@@ -54,6 +54,10 @@ def main(mqttClient, configs):
 
 
     while True:
+        if not configs["connected"]:
+            time.sleep(0.2)
+            continue
+
         # MONITOR DATA
         new_monitoring_data = None
         try:
