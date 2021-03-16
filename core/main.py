@@ -150,7 +150,6 @@ class Agent(object):
     
     def set_testament(self, is_reconnection=False):
         if is_reconnection:
-            print("*"*20, "  INCREASING CONNECTION ID")
             self.connection_id += 1
 
         self.logger.info(f"Setting testament, is_reconnection={is_reconnection}, connection_id={self.connection_id}")
