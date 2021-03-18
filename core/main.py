@@ -1,3 +1,5 @@
+from .modules import fixer
+
 import json
 import time
 import paho.mqtt.client as mqtt
