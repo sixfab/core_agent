@@ -54,8 +54,9 @@ def main(mqttClient, configs):
 
 
     while True:
-        if not configs["connected"]:
-            time.sleep(0.2)
+        if not mqttClient.is_connected():
+            logger.debug("Not connected to MQTT broker, ignoring monitoring thread. Retrying in 10 secs")
+            time.sleep(10)
             continue
 
         # MONITOR DATA

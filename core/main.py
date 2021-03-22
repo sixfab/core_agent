@@ -27,7 +27,6 @@ class Agent(object):
         self.token = self.configs["token"]
         self.logger = logger.initialize_logger()
         self.configs["logger"] = self.logger
-        self.configs["connected"] = False
         self.monitoring_initialized = False
         self.connection_id = 1
         self.first_connection_message_recieved = False
@@ -194,12 +193,9 @@ class Agent(object):
         )
 
 
-        self.configs["connected"] = True
-
     def __on_disconnect(self, client, userdata, rc):
         print("Disconnected. Result Code: {rc}".format(rc=rc))
         self.logger.warning("Disconnected from the broker")
-        self.configs["connected"] = False
         self.set_testament(is_reconnection=True)
 
     def __on_log(self, mqttc, userdata, level, string):
