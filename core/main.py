@@ -1,5 +1,3 @@
-from .modules import fixer
-
 import json
 import time
 import paho.mqtt.client as mqtt
@@ -11,7 +9,7 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring, maintenance
+from .modules import monitoring, updater
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
 MQTT_PORT = 1883
@@ -29,7 +27,7 @@ class Agent(object):
         self.token = self.configs["token"]
         self.logger = logger.initialize_logger()
         self.configs["logger"] = self.logger
-        self.monitoring_initialized = False
+        self.monitoring_thread = None
         self.connection_id = 1
         self.first_connection_message_recieved = False
 
@@ -145,8 +143,8 @@ class Agent(object):
             if not command:
                 return
 
-            if command == "maintenance":
-                Thread(target=maintenance.main, args=(data, self.configs, self.client)).start()
+            if command == "update":
+                Thread(target=updater.update_modules, args=(self.configs, self.client)).start()
 
     
     def set_testament(self, is_reconnection=False):
@@ -168,13 +166,8 @@ class Agent(object):
         )
 
 
-
     def __on_connect(self, client, userdata, flags, rc):
         self.logger.info("Connected to the broker")
-
-        if not self.monitoring_initialized:
-            Thread(target=monitoring.main, args=(self.client, self.configs)).start()
-            self.monitoring_initialized = True
 
         self.client.subscribe(f"device/{self.token}/directives", qos=1)
         self.client.subscribe(f"device/{self.token}/connected", qos=1)
@@ -201,4 +194,23 @@ class Agent(object):
         self.set_testament(is_reconnection=True)
 
     def __on_log(self, mqttc, userdata, level, string):
-        print(string.replace(userdata, "...censored_uuid..."))
+        #print(string.replace(userdata, "...censored_uuid..."))
+        self.__check_monitoring_thread() # to keep monitoring thread alive continiously
+
+
+    def __check_monitoring_thread(self):
+        if self.monitoring_thread == None:
+            self.logger.warning("[MONITORING] Monitoring thread not initialized, initializing")
+            self.monitoring_thread = Thread(target=monitoring.main, args=(self.client, self.configs))
+
+        elif self.monitoring_thread.is_alive():
+            return
+
+        if not self.monitoring_thread.is_alive():
+            try:
+                self.logger.warning("[MONITORING] Starting monitoring thread")
+                self.monitoring_thread.start()
+            except RuntimeError:
+                self.logger.warning("[MONITORING] Couldn't start the thread, re-initializing and starting again...")
+                self.monitoring_thread = Thread(target=monitoring.main, args=(self.client, self.configs))
+                self.monitoring_thread.start()
