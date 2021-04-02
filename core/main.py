@@ -9,7 +9,7 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring, updater
+from .modules import monitoring, maintenance
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
 MQTT_PORT = 1883
@@ -143,8 +143,8 @@ class Agent(object):
             if not command:
                 return
 
-            if command == "update":
-                Thread(target=updater.update_modules, args=(self.configs, self.client)).start()
+            if command == "maintenance":
+                Thread(target=maintenance.main, args=(data, self.configs, self.client)).start()
 
     
     def set_testament(self, is_reconnection=False):
