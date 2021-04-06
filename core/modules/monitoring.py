@@ -15,7 +15,7 @@ CONTROL_INTERVAL=30
 message_cache = {} # key, value pattern for each mid, message_body
 
 
-def main(mqttClient, configs):
+def loop(mqttClient, configs):
     logger = configs["logger"]
     last_monitoring_data = {}
     last_system_data = {}
@@ -54,6 +54,11 @@ def main(mqttClient, configs):
 
 
     while True:
+        if not mqttClient.is_connected():
+            logger.debug("Not connected to MQTT broker, ignoring monitoring thread. Retrying in 10 secs")
+            time.sleep(10)
+            continue
+
         # MONITOR DATA
         new_monitoring_data = None
         try:
@@ -137,3 +142,11 @@ def main(mqttClient, configs):
 
 
         time.sleep(CONTROL_INTERVAL)
+
+
+def main(mqttClient, configs):
+    while True:
+        try:
+            loop(mqttClient, configs)
+        except Exception as e:
+            configs["logger"].exception("[MONITORING] Raised an error from monitoring thread")
