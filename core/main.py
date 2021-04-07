@@ -9,7 +9,7 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring, maintenance
+from .modules import monitoring, maintenance, fixer
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
 MQTT_PORT = 1883
