@@ -9,7 +9,8 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring, maintenance, fixer
+from .modules import monitoring, maintenance, configurator, fixer
+from .shared import config_request_cache
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
 MQTT_PORT = 1883
@@ -145,6 +146,12 @@ class Agent(object):
 
             if command == "maintenance":
                 Thread(target=maintenance.main, args=(data, self.configs, self.client)).start()
+            elif command == "config":
+                configurator.create_configuration_request(data, client, self.configs)
+            elif command == "ack":
+                if data in config_request_cache.values():
+                    request_id = data
+                    configurator.delete_configuration_request(request_id, client, self.configs)
 
     
     def set_testament(self, is_reconnection=False):
