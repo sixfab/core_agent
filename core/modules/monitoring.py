@@ -1,9 +1,11 @@
+import os
 import yaml
 import json
 import time
 from uuid import uuid4
 
 from core.__version__ import version
+from core.shared import config_request_cache
 
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -13,7 +15,38 @@ except ImportError:
 
 CONTROL_INTERVAL=30
 message_cache = {} # key, value pattern for each mid, message_body
+CONFIGS_REQUEST_PATH = "/home/sixfab/.core/configs/request"
 
+
+def _check_configuration_requests(mqtt_client, configs):
+    logger = configs["logger"]
+
+    files = os.listdir(CONFIGS_REQUEST_PATH)
+
+    for file_name in files:
+        if not file_name.endswith("_done"):
+            continue
+
+        if file_name in config_request_cache:
+            request_id = config_request_cache[file_name]
+        else:
+            file_content = open(f"{CONFIGS_REQUEST_PATH}/{file_name}")
+            request_id = yaml.load(file_content, Loader=Loader)["id"]
+
+            config_request_cache[file_name] = request_id
+
+        logger.info(f"[CONFIGURATOR] Sendin status update to cloud, status=done, request_id={request_id}")
+
+        mqtt_client.publish(
+            f"device/{configs['token']}/hive", 
+            json.dumps({
+                "type": "config",
+                "data": {
+                    "id": request_id,
+                    "status": "done"
+                }
+            })
+        )
 
 def loop(mqttClient, configs):
     logger = configs["logger"]
@@ -58,6 +91,13 @@ def loop(mqttClient, configs):
             logger.debug("Not connected to MQTT broker, ignoring monitoring thread. Retrying in 10 secs")
             time.sleep(10)
             continue
+
+        # CHECK STATUS OF CONFIGURATION REQUESTS
+        try:
+            _check_configuration_requests(mqttClient, configs)
+        except:
+            logger.exception("[MONITORING] Raised an exception during configuration monitoring")
+
 
         # MONITOR DATA
         new_monitoring_data = None
