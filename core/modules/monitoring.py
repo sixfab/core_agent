@@ -35,7 +35,7 @@ def _check_configuration_requests(mqtt_client, configs):
 
             config_request_cache[file_name] = request_id
 
-        logger.info(f"[CONFIGURATOR] Sendin status update to cloud, status=done, request_id={request_id}")
+        logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=recieved, request_id={request_id}")
 
         mqtt_client.publish(
             f"device/{configs['token']}/hive", 
@@ -43,7 +43,7 @@ def _check_configuration_requests(mqtt_client, configs):
                 "type": "config",
                 "data": {
                     "id": request_id,
-                    "status": "done"
+                    "status": "recieved"
                 }
             })
         )
@@ -52,6 +52,7 @@ def loop(mqttClient, configs):
     logger = configs["logger"]
     last_monitoring_data = {}
     last_system_data = {}
+    last_config_data = {}
 
 
     def callback(client, userdata, msg):
@@ -80,6 +81,10 @@ def loop(mqttClient, configs):
                 elif data["type"] == "data_system":
                     last_system_data.update(data["data"])
                     logger.debug("Updated last system data")
+
+                elif data["type"] == "data_config":
+                    last_config_data.update(data["data"])
+                    logger.debug("Updated last config data")
 
 
 
@@ -179,6 +184,47 @@ def loop(mqttClient, configs):
                 logger.debug("Sending new system data")
             else:
                 logger.debug("Skipping system data, couldn't find any changes.")
+
+
+        # CONFIG DATA
+        new_config_data = None
+        try:
+            new_config_data = open("/home/sixfab/.core/configs/config.yaml")
+        except:
+            logger.error("System data not exists!")
+
+        if new_config_data:
+            new_config_data = yaml.load(new_config_data, Loader=Loader)
+    
+            data_to_send = {}
+    
+            for key, value in new_config_data.items():
+                last_value = last_config_data.get(key, "N/A")
+
+                if value != last_value:
+                    data_to_send[key] = value
+    
+    
+            if data_to_send:
+                mid = uuid4().hex[-4:]
+
+                message_body = dict(
+                    type="data_config",
+                    data=data_to_send,
+                    mid=mid
+                )
+
+                message_response = mqttClient.publish(
+                    f"device/{configs['token']}/hive", 
+                    json.dumps(message_body)
+                )
+
+                message_cache[mid] = message_body
+    
+                logger.debug("Sending new config data")
+            else:
+                logger.debug("Skipping config data, couldn't find any changes.")
+
 
 
         time.sleep(CONTROL_INTERVAL)

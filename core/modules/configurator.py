@@ -51,7 +51,7 @@ def create_configuration_request(data, mqtt_client, configs):
             "type": "config",
             "data": {
                 "id": request_id,
-                "status": "requested"
+                "status": "sent"
             }
         })
     )
