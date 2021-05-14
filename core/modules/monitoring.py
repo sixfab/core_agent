@@ -112,7 +112,7 @@ def loop(mqttClient, configs):
             logger.error("Monitoring data not exists!")
 
         if new_monitoring_data:
-            new_monitoring_data = yaml.load(new_monitoring_data, Loader=Loader)
+            new_monitoring_data = yaml.load(new_monitoring_data, Loader=Loader) or {}
 
             data_to_send = {}
 
@@ -153,7 +153,7 @@ def loop(mqttClient, configs):
             logger.error("System data not exists!")
 
         if new_system_data:
-            new_system_data = yaml.load(new_system_data, Loader=Loader)
+            new_system_data = yaml.load(new_system_data, Loader=Loader) or {}
             new_system_data["agent_version"] = version
     
             data_to_send = {}
@@ -194,8 +194,8 @@ def loop(mqttClient, configs):
             logger.error("System data not exists!")
 
         if new_config_data:
-            new_config_data = yaml.load(new_config_data, Loader=Loader)
-    
+            new_config_data = yaml.load(new_config_data, Loader=Loader) or {}
+
             data_to_send = {}
     
             for key, value in new_config_data.items():
