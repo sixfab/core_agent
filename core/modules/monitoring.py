@@ -21,6 +21,10 @@ CONFIGS_REQUEST_PATH = "/home/sixfab/.core/configs/request"
 def _check_configuration_requests(mqtt_client, configs):
     logger = configs["logger"]
 
+    if not os.path.exists(CONFIGS_REQUEST_PATH):
+        logger.debug("[CONFIGURATOR] Configs folder not found, skip for now")
+        return
+
     files = os.listdir(CONFIGS_REQUEST_PATH)
 
     for file_name in files:
@@ -112,7 +116,7 @@ def loop(mqttClient, configs):
             logger.error("Monitoring data not exists!")
 
         if new_monitoring_data:
-            new_monitoring_data = yaml.load(new_monitoring_data, Loader=Loader)
+            new_monitoring_data = yaml.load(new_monitoring_data, Loader=Loader) or {}
 
             data_to_send = {}
 
@@ -153,7 +157,7 @@ def loop(mqttClient, configs):
             logger.error("System data not exists!")
 
         if new_system_data:
-            new_system_data = yaml.load(new_system_data, Loader=Loader)
+            new_system_data = yaml.load(new_system_data, Loader=Loader) or {}
             new_system_data["agent_version"] = version
     
             data_to_send = {}
@@ -194,8 +198,8 @@ def loop(mqttClient, configs):
             logger.error("System data not exists!")
 
         if new_config_data:
-            new_config_data = yaml.load(new_config_data, Loader=Loader)
-    
+            new_config_data = yaml.load(new_config_data, Loader=Loader) or {}
+
             data_to_send = {}
     
             for key, value in new_config_data.items():
