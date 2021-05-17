@@ -21,6 +21,10 @@ CONFIGS_REQUEST_PATH = "/home/sixfab/.core/configs/request"
 def _check_configuration_requests(mqtt_client, configs):
     logger = configs["logger"]
 
+    if not os.path.exists(CONFIGS_REQUEST_PATH):
+        logger.debug("[CONFIGURATOR] Configs folder not found, skip for now")
+        return
+
     files = os.listdir(CONFIGS_REQUEST_PATH)
 
     for file_name in files:
