@@ -21,7 +21,7 @@ def update_service(service, beta_enabled, logger, mqtt_client, token):
         "sudo git fetch",
         "sudo git pull",
         "sudo git checkout dev" if beta_enabled else "sudo git checkout master",
-        "sudo pip3 install -r requirements.txt"
+        "sudo pip3 install -U -r requirements.txt"
     ]
 
     os.system(" && ".join(commands))
