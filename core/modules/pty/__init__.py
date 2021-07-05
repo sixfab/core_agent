@@ -9,7 +9,7 @@ BUILDS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class PTYController:
     def __init__(self, configs):
-        #self.start_agent()
+        self.start_agent()
         self.logger = configs["logger"]
 
     def stop_running_agent(self):
@@ -52,7 +52,6 @@ class PTYController:
             data = data.encode()
 
         if not self.is_agent_running():
-            pass
             self.start_agent()
 
         response = None
