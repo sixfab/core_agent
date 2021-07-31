@@ -27,7 +27,10 @@ class PTYController:
     def is_agent_running(self):
         try:
             running_pid = subprocess.check_output(["sudo", "fuser", "8998/tcp"], stderr=subprocess.DEVNULL).decode()
-            return True
+            response = request.urlopen("http://localhost:8998/healthcheck")
+            response = response.read()
+
+            return response == b"alive"
         except:
             return False
 
@@ -54,7 +57,7 @@ class PTYController:
         response = None
 
         try:
-            response = request.urlopen("http://localhost:8998", data)
+            response = request.urlopen("http://localhost:8998/session", data)
             response = response.read()
 
         except Exception as e:
@@ -66,7 +69,7 @@ class PTYController:
 
             time.sleep(1)
 
-            response = request.urlopen("http://localhost:8998", data)
+            response = request.urlopen("http://localhost:8998/session", data)
             response = response.read()
 
 
