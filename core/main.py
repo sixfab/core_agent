@@ -33,10 +33,12 @@ class Agent(object):
         self.first_connection_message_recieved = False
 
         self.lock_thread = Lock()
-        self.terminal = pty.PTYController(self.configs)
 
         client = mqtt.Client(client_id=f"device/{self.token}")
         self.client = client
+        self.configs["mqtt_client"] = self.client
+
+        self.terminal = pty.PTYController(self.configs)
 
         client.username_pw_set(self.token, "sixfab")
         client.user_data_set(self.token)
@@ -88,15 +90,18 @@ class Agent(object):
 
             answer = self.terminal.request(b64decode(payload))
 
-            client.publish(
-                f"signaling/{self.token}/response",
-                json.dumps({
-                    "id": requestID,
-                    "payload": b64encode(answer).decode()
-                }),
-            )
+            if answer:
+                client.publish(
+                    f"signaling/{self.token}/response",
+                    json.dumps({
+                        "id": requestID,
+                        "payload": b64encode(answer).decode()
+                    }),
+                )
 
-            self.logger.debug("[SIGNALING] Sent response")
+                self.logger.debug("[SIGNALING] Sent response")
+            else:
+                self.logger.error("[SIGNALING] An error occured during signaling, couldn't create answer")
 
 
         elif is_connection_status_message:
