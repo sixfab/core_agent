@@ -1,4 +1,3 @@
-builds/
 *.local
 configs.json*
 

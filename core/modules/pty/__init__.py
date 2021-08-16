@@ -9,8 +9,16 @@ BUILDS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class PTYController:
     def __init__(self, configs):
-        self.start_agent()
+        self.supported_architectures = {
+            "aarh64": "arm64",
+            "armv6l": "arm32",
+            "armv7l": "arm32",
+        }
+        
+        self.configs = configs
         self.logger = configs["logger"]
+        self.mqtt_client = configs["mqtt_client"]
+        self.start_agent()
 
     def stop_running_agent(self):
         try:
@@ -36,15 +44,21 @@ class PTYController:
 
 
     def start_agent(self):
-        processor_architecture = platform.machine()
+        architecture = platform.machine()
 
-        if not os.path.exists(f"{BUILDS_DIR}/{processor_architecture}"):
-            print("platform not supported")
-            return
+        if architecture not in self.supported_architectures:
+            self.logger.error(f"{architecture} is not supported for remote terminal")
+            self.mqtt_client.publish(f"signaling/{self.configs['token']}/response", "platform_not_supported")
+            return False
+
+
+        executable_source=self.supported_architectures[architecture]
 
         self.stop_running_agent()
-        print("started go agent ", f"{BUILDS_DIR}/{processor_architecture}")
-        os.system(f"{BUILDS_DIR}/{processor_architecture} &")
+        print("started go agent ", f"{BUILDS_DIR}/builds/{executable_source}")
+        os.system(f"{BUILDS_DIR}/builds/{executable_source} &")
+
+        return True
 
 
     def request(self, data):
@@ -52,7 +66,8 @@ class PTYController:
             data = data.encode()
 
         if not self.is_agent_running():
-            self.start_agent()
+            if not self.start_agent():
+                return
 
         response = None
 
