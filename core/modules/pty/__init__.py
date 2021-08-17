@@ -10,7 +10,7 @@ BUILDS_DIR = os.path.dirname(os.path.realpath(__file__))
 class PTYController:
     def __init__(self, configs):
         self.supported_architectures = {
-            "aarh64": "arm64",
+            "aarch64": "arm64",
             "armv6l": "arm32",
             "armv7l": "arm32",
         }
