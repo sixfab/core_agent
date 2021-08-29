@@ -35,8 +35,11 @@ class PTYController:
     def is_agent_running(self):
         try:
             running_pid = subprocess.check_output(["sudo", "fuser", "8998/tcp"], stderr=subprocess.DEVNULL).decode()
-            response = request.urlopen("http://localhost:8998/healthcheck")
-            response = response.read()
+            try:
+                response = request.urlopen("http://localhost:8998/healthcheck")
+                response = response.read()
+            except:
+                response = b'dead'
 
             return response == b"alive"
         except:
