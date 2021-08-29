@@ -35,8 +35,11 @@ class PTYController:
     def is_agent_running(self):
         try:
             running_pid = subprocess.check_output(["sudo", "fuser", "8998/tcp"], stderr=subprocess.DEVNULL).decode()
-            response = request.urlopen("http://localhost:8998/healthcheck")
-            response = response.read()
+            try:
+                response = request.urlopen("http://localhost:8998/healthcheck")
+                response = response.read()
+            except:
+                response = b'dead'
 
             return response == b"alive"
         except:
@@ -44,6 +47,9 @@ class PTYController:
 
 
     def start_agent(self):
+        if self.is_agent_running():
+            self.stop_running_agent()
+
         architecture = platform.machine()
 
         if architecture not in self.supported_architectures:
@@ -54,9 +60,9 @@ class PTYController:
 
         executable_source=self.supported_architectures[architecture]
 
-        self.stop_running_agent()
         print("started go agent ", f"{BUILDS_DIR}/builds/{executable_source}")
-        os.system(f"{BUILDS_DIR}/builds/{executable_source} &")
+        executable_path = f"{BUILDS_DIR}/builds/{executable_source}"
+        os.system(f"sudo chmod +x {executable_path} && {executable_path} &")
 
         return True
 
