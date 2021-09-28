@@ -39,7 +39,7 @@ def _check_configuration_requests(mqtt_client, configs):
 
             config_request_cache[file_name] = request_id
 
-        logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=recieved, request_id={request_id}")
+        logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=received, request_id={request_id}")
 
         mqtt_client.publish(
             f"device/{configs['token']}/hive", 
@@ -47,7 +47,7 @@ def _check_configuration_requests(mqtt_client, configs):
                 "type": "config",
                 "data": {
                     "id": request_id,
-                    "status": "recieved"
+                    "status": "received"
                 }
             })
         )
