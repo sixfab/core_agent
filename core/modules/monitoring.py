@@ -117,6 +117,7 @@ def loop(mqttClient, configs):
             logger.exception("Monitoring data not exists!")
 
         if new_monitoring_data:
+            new_monitoring_data.pop("last_update", None)
             data_to_send = {}
 
             for key, value in new_monitoring_data.items():
@@ -158,6 +159,7 @@ def loop(mqttClient, configs):
 
         if new_system_data:
             new_system_data["agent_version"] = version
+            new_system_data.pop("last_update", None)
     
             data_to_send = {}
     
