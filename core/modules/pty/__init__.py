@@ -9,8 +9,16 @@ BUILDS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class PTYController:
     def __init__(self, configs):
-        self.start_agent()
+        self.supported_architectures = {
+            "aarch64": "arm64",
+            "armv6l": "arm32",
+            "armv7l": "arm32",
+        }
+        
+        self.configs = configs
         self.logger = configs["logger"]
+        self.mqtt_client = configs["mqtt_client"]
+        self.start_agent()
 
     def stop_running_agent(self):
         try:
@@ -27,8 +35,11 @@ class PTYController:
     def is_agent_running(self):
         try:
             running_pid = subprocess.check_output(["sudo", "fuser", "8998/tcp"], stderr=subprocess.DEVNULL).decode()
-            response = request.urlopen("http://localhost:8998/healthcheck")
-            response = response.read()
+            try:
+                response = request.urlopen("http://localhost:8998/healthcheck")
+                response = response.read()
+            except:
+                response = b'dead'
 
             return response == b"alive"
         except:
@@ -36,15 +47,24 @@ class PTYController:
 
 
     def start_agent(self):
-        processor_architecture = platform.machine()
+        if self.is_agent_running():
+            self.stop_running_agent()
 
-        if not os.path.exists(f"{BUILDS_DIR}/{processor_architecture}"):
-            print("platform not supported")
-            return
+        architecture = platform.machine()
 
-        self.stop_running_agent()
-        print("started go agent ", f"{BUILDS_DIR}/{processor_architecture}")
-        os.system(f"{BUILDS_DIR}/{processor_architecture} &")
+        if architecture not in self.supported_architectures:
+            self.logger.error(f"{architecture} is not supported for remote terminal")
+            self.mqtt_client.publish(f"signaling/{self.configs['token']}/response", "platform_not_supported")
+            return False
+
+
+        executable_source=self.supported_architectures[architecture]
+
+        print("started go agent ", f"{BUILDS_DIR}/builds/{executable_source}")
+        executable_path = f"{BUILDS_DIR}/builds/{executable_source}"
+        os.system(f"sudo chmod +x {executable_path} && {executable_path} &")
+
+        return True
 
 
     def request(self, data):
@@ -52,7 +72,8 @@ class PTYController:
             data = data.encode()
 
         if not self.is_agent_running():
-            self.start_agent()
+            if not self.start_agent():
+                return
 
         response = None
 

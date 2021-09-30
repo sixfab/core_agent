@@ -39,7 +39,7 @@ def _check_configuration_requests(mqtt_client, configs):
 
             config_request_cache[file_name] = request_id
 
-        logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=recieved, request_id={request_id}")
+        logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=received, request_id={request_id}")
 
         mqtt_client.publish(
             f"device/{configs['token']}/hive", 
@@ -47,7 +47,7 @@ def _check_configuration_requests(mqtt_client, configs):
                 "type": "config",
                 "data": {
                     "id": request_id,
-                    "status": "recieved"
+                    "status": "received"
                 }
             })
         )
@@ -111,13 +111,13 @@ def loop(mqttClient, configs):
         # MONITOR DATA
         new_monitoring_data = None
         try:
-            new_monitoring_data = open("/home/sixfab/.core/monitor.yaml")
-        except:
-            logger.error("Monitoring data not exists!")
+            with open("/home/sixfab/.core/monitor.yaml") as monitor_data:
+                new_monitoring_data = yaml.load(monitor_data, Loader=Loader) or {}
+        except Exception:
+            logger.exception("Monitoring data not exists!")
 
         if new_monitoring_data:
-            new_monitoring_data = yaml.load(new_monitoring_data, Loader=Loader) or {}
-
+            new_monitoring_data.pop("last_update", None)
             data_to_send = {}
 
             for key, value in new_monitoring_data.items():
@@ -152,13 +152,14 @@ def loop(mqttClient, configs):
         # SYSTEM DATA
         new_system_data = None
         try:
-            new_system_data = open("/home/sixfab/.core/system.yaml")
-        except:
-            logger.error("System data not exists!")
+            with open("/home/sixfab/.core/system.yaml") as system_data:
+                new_system_data = yaml.load(system_data, Loader=Loader) or {}
+        except Exception:
+            logger.exception("System data not exists!")
 
         if new_system_data:
-            new_system_data = yaml.load(new_system_data, Loader=Loader) or {}
             new_system_data["agent_version"] = version
+            new_system_data.pop("last_update", None)
     
             data_to_send = {}
     
@@ -193,13 +194,12 @@ def loop(mqttClient, configs):
         # CONFIG DATA
         new_config_data = None
         try:
-            new_config_data = open("/home/sixfab/.core/configs/config.yaml")
-        except:
-            logger.error("System data not exists!")
+            with open("/home/sixfab/.core/configs/config.yaml") as config_data:
+                new_config_data = yaml.load(config_data, Loader=Loader) or {}
+        except Exception:
+            logger.exception("System data not exists!")
 
         if new_config_data:
-            new_config_data = yaml.load(new_config_data, Loader=Loader) or {}
-
             data_to_send = {}
     
             for key, value in new_config_data.items():
