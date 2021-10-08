@@ -197,7 +197,7 @@ def loop(mqttClient, configs):
             with open("/home/sixfab/.core/configs/config.yaml") as config_data:
                 new_config_data = yaml.load(config_data, Loader=Loader) or {}
         except Exception:
-            logger.exception("System data not exists!")
+            logger.exception("Config data not exists!")
 
         if new_config_data:
             data_to_send = {}
