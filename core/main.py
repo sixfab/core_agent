@@ -202,7 +202,7 @@ class Agent(object):
 
     def __on_disconnect(self, client, userdata, rc):
         print("Disconnected. Result Code: {rc}".format(rc=rc))
-        self.logger.warning("Disconnected from the broker")
+        self.logger.warning("Disconnected from the broker, rc=", rc)
         self.set_testament(is_reconnection=True)
 
     def __on_log(self, mqttc, userdata, level, string):
