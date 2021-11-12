@@ -129,8 +129,6 @@ def loop(mqttClient, configs):
             if data_to_send:
                 mid = uuid4().hex[-4:]
 
-                data_to_send["timestamp"] = time.time()
-
                 message_body = dict(
                     type="data_monitoring",
                     data=data_to_send,
