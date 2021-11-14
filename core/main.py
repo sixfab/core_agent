@@ -56,7 +56,8 @@ class Agent(object):
                 self.client.connect(
                     self.configs.get("MQTT_HOST", MQTT_HOST),
                     MQTT_PORT,
-                    keepalive=60,
+                    keepalive=10,
+                    clean_start=False
                 )
                 break
             except:
@@ -103,40 +104,6 @@ class Agent(object):
             else:
                 self.logger.error("[SIGNALING] An error occured during signaling, couldn't create answer")
 
-
-        elif is_connection_status_message:
-            if not self.first_connection_message_recieved:
-                self.first_connection_message_recieved = True
-                return
-
-            is_disconnected = False
-
-            if payload[0] == "{":
-                payload = json.loads(payload)
-
-                is_disconnected = payload.get("v", 0) == 0
-            else:
-                is_disconnected = payload == "0"
-
-            if not is_disconnected:
-                return # payload doesn't contain any disconnection data
-                       # skip it for now
-
-            self.logger.warning(
-                "[CONNECTION] The broker assuming I'm offline, I'm updating my status"
-            )
-            self.client.publish(
-                f"device/{self.token}/connected", 
-                json.dumps(dict(
-                    ts=time.time(),
-                    v=1,
-                    id=self.connection_id
-                )), 
-                retain=True
-            )
-
-            return
-
         elif is_directive:
             try:
                 payload = json.loads(payload)
@@ -173,7 +140,7 @@ class Agent(object):
         self.client.will_set(
             "device/{}/connected".format(self.token),
             testament_message,
-            qos=1,
+            qos=2,
             retain=True,
         )
 
@@ -182,7 +149,6 @@ class Agent(object):
         self.logger.info("Connected to the broker")
 
         self.client.subscribe(f"device/{self.token}/directives", qos=1)
-        self.client.subscribe(f"device/{self.token}/connected", qos=1)
         self.client.subscribe(f"signaling/{self.token}/request", qos=1)
 
 
@@ -195,14 +161,14 @@ class Agent(object):
         self.client.publish(
             f"device/{self.token}/connected",
             connect_message,
-            qos=1,
+            qos=2,
             retain=True,
         )
 
 
     def __on_disconnect(self, client, userdata, rc):
         print("Disconnected. Result Code: {rc}".format(rc=rc))
-        self.logger.warning("Disconnected from the broker")
+        self.logger.warning("Disconnected from the broker, rc=", rc)
         self.set_testament(is_reconnection=True)
 
     def __on_log(self, mqttc, userdata, level, string):
