@@ -34,7 +34,10 @@ class Agent(object):
 
         self.lock_thread = Lock()
 
-        client = mqtt.Client(client_id=f"device/{self.token}")
+        client = mqtt.Client(
+            client_id=f"device/{self.token}",
+            clean_session=False
+            )
         self.client = client
         self.configs["mqtt_client"] = self.client
 
@@ -56,8 +59,7 @@ class Agent(object):
                 self.client.connect(
                     self.configs.get("MQTT_HOST", MQTT_HOST),
                     MQTT_PORT,
-                    keepalive=10,
-                    clean_session=False
+                    keepalive=10
                 )
                 break
             except:
