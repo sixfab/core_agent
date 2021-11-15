@@ -57,7 +57,7 @@ class Agent(object):
                     self.configs.get("MQTT_HOST", MQTT_HOST),
                     MQTT_PORT,
                     keepalive=10,
-                    clean_start=False
+                    clean_session=False
                 )
                 break
             except:
