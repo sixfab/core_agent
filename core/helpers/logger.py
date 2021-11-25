@@ -25,7 +25,7 @@ def initialize_logger():
 
     logger.addHandler(log_file_handler)
 
-    if os.getenv("DEBUG", "") == "true": 
+    if bool(os.getenv("DEBUG", None)): 
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
