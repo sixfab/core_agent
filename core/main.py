@@ -9,7 +9,7 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring, maintenance, configurator, fixer
+from .modules import monitoring, maintenance, configurator
 from .shared import config_request_cache
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
@@ -20,8 +20,6 @@ class Agent(object):
     def __init__(
         self,
         configs: dict,
-        lwt: bool = True,
-        enable_feeder: bool = True,
     ):
         configs["core"]["callbacks"] = []
         self.configs = configs["core"]
@@ -29,8 +27,11 @@ class Agent(object):
         self.logger = logger.initialize_logger()
         self.configs["logger"] = self.logger
         self.monitoring_thread = None
-        self.connection_id = 1
-        self.first_connection_message_recieved = False
+
+        self.connection_sequence = 0
+        self.connection_timestamp = 0
+        self.is_fresh_connection = True
+        self.used_last_connection_sequence = True
 
         self.lock_thread = Lock()
 
@@ -46,7 +47,7 @@ class Agent(object):
         client.username_pw_set(self.token, "sixfab")
         client.user_data_set(self.token)
 
-        self.set_testament()
+        self.initialize_death_certificate(initial=True)
 
         client.on_connect = self.__on_connect
         client.on_message = self.__on_message
@@ -59,7 +60,7 @@ class Agent(object):
                 self.client.connect(
                     self.configs.get("MQTT_HOST", MQTT_HOST),
                     MQTT_PORT,
-                    keepalive=10
+                    keepalive=60
                 )
                 break
             except:
@@ -128,52 +129,87 @@ class Agent(object):
                     configurator.delete_configuration_request(request_id, client, self.configs)
 
     
-    def set_testament(self, is_reconnection=False):
-        if is_reconnection:
-            self.connection_id += 1
+    def increase_connection_sequence(self):
+        """
+        Increases the connection sequence. This is used to identify the connection.
+        Reset to zero if reached to 255.
+        """
+        if self.connection_sequence == 255:
+            self.connection_sequence = 0
+        else:
+            self.connection_sequence += 1
 
-        self.logger.info(f"Setting testament, is_reconnection={is_reconnection}, connection_id={self.connection_id}")
+        return self.connection_sequence
+
+    def initialize_death_certificate(self, is_reconnect=False, initial=False):
+        if not self.used_last_connection_sequence:
+            self.logger.debug("Didn't used last updated connection sequence yet, skipping")
+            return
+
+        if is_reconnect:
+            self.is_fresh_connection = False
+
+        if not initial:
+            self.increase_connection_sequence()
+
+        self.connection_timestamp = int(time.time())
+        self.logger.info(
+            "Updated LWT, fresh=%s, connection_sequence=%s, timestamp=%s", 
+            self.is_fresh_connection, 
+            self.connection_sequence,
+            self.connection_timestamp
+        )
 
         testament_message = json.dumps(dict(
-            v=0,
-            id=self.connection_id
+            seq=self.connection_sequence,
+            ts=self.connection_timestamp
         ))
 
         self.client.will_set(
-            "device/{}/connected".format(self.token),
+            f"device/{self.token}/death",
             testament_message,
             qos=2,
             retain=True,
         )
 
+        self.used_last_connection_sequence = False
 
-    def __on_connect(self, client, userdata, flags, rc):
-        self.logger.info("Connected to the broker")
+    def publish_birth_certificate(self):
+        connect_message = {
+            "seq": self.connection_sequence,
+            "ts": self.connection_timestamp
+        }
 
-        self.client.subscribe(f"device/{self.token}/directives", qos=1)
-        self.client.subscribe(f"signaling/{self.token}/request", qos=1)
-
-
-        connect_message = json.dumps(dict(
-            ts=time.time(),
-            v=1,
-            id=self.connection_id
-        ))
+        if self.is_fresh_connection:
+            connect_message["fresh"] = True
 
         self.client.publish(
-            f"device/{self.token}/connected",
-            connect_message,
+            f"device/{self.token}/birth",
+            json.dumps(connect_message),
             qos=2,
             retain=True,
         )
+        
+        self.used_last_connection_sequence = True
+
+        self.logger.info("Sent birth certificate")
+
+
+    def __on_connect(self, client, userdata, flags, rc):
+        if rc == 0:
+            self.logger.info("Connected to the broker")
+
+            self.client.subscribe(f"device/{self.token}/directives", qos=1)
+            self.client.subscribe(f"signaling/{self.token}/request", qos=1)
+
+            self.publish_birth_certificate()
 
 
     def __on_disconnect(self, client, userdata, rc):
-        print("Disconnected. Result Code: {rc}".format(rc=rc))
-        self.logger.warning("Disconnected from the broker, rc=", rc)
-        self.set_testament(is_reconnection=True)
+        self.logger.warning("Disconnected from the broker, rc=%s", rc)
+        self.initialize_death_certificate(is_reconnect=True)
 
-    def __on_log(self, mqttc, userdata, level, string):
+    def __on_log(self, client, userdata, level, string):
         #print(string.replace(userdata, "...censored_uuid..."))
         self.__check_monitoring_thread() # to keep monitoring thread alive continiously
 
