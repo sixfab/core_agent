@@ -9,7 +9,7 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring, maintenance, configurator
+from .modules import monitoring, maintenance, configurator, fixer
 from .shared import config_request_cache
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
