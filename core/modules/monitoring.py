@@ -78,7 +78,8 @@ def loop(mqttClient, configs):
                 data = message_cache[mid]
 
                 if data["type"] == "data_monitoring":
-                    del data["data"]["timestamp"]
+                    data["data"].pop("timestamp", None)
+                    data["data"].pop("last_update", None)
                     last_monitoring_data.update(data["data"])
                     logger.debug("Updated last monitoring data")
 
