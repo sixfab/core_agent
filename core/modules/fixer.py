@@ -15,7 +15,8 @@ def execute_fix(name, command):
 try:
     fixes_list = check_output(["sudo", "cat", "/opt/sixfab/core/.fixes"]).decode().split("\n")
 except:
-    pass
+    fixes_list = []
+
 
 # change old service file with new one
 execute_fix("190320-manager-ifmetric", r'while :;do command -v ifmetric;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install ifmetric -y;done')
