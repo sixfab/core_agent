@@ -15,7 +15,11 @@ except ImportError:
 
 CONTROL_INTERVAL=30
 message_cache = {} # key, value pattern for each mid, message_body
-CONFIGS_REQUEST_PATH = "/home/sixfab/.core/configs/request"
+USER_PATH = os.path.expanduser("~")
+SYSTEM_PATH = f"{USER_PATH}/.core/system.yaml"
+MONITOR_PATH = f"{USER_PATH}/.core/monitor.yaml"
+CONFIG_PATH = f"{USER_PATH}/.core/configs/config.yaml"
+CONFIGS_REQUEST_PATH = f"{USER_PATH}/.core/configs/request"
 
 
 def _check_configuration_requests(mqtt_client, configs):
@@ -112,7 +116,7 @@ def loop(mqttClient, configs):
         # MONITOR DATA
         new_monitoring_data = None
         try:
-            with open("/home/sixfab/.core/monitor.yaml") as monitor_data:
+            with open(MONITOR_PATH) as monitor_data:
                 new_monitoring_data = yaml.load(monitor_data, Loader=Loader) or {}
         except Exception:
             logger.exception("Monitoring data not exists!")
@@ -151,7 +155,7 @@ def loop(mqttClient, configs):
         # SYSTEM DATA
         new_system_data = None
         try:
-            with open("/home/sixfab/.core/system.yaml") as system_data:
+            with open(SYSTEM_PATH) as system_data:
                 new_system_data = yaml.load(system_data, Loader=Loader) or {}
         except Exception:
             logger.exception("System data not exists!")
@@ -193,7 +197,7 @@ def loop(mqttClient, configs):
         # CONFIG DATA
         new_config_data = None
         try:
-            with open("/home/sixfab/.core/configs/config.yaml") as config_data:
+            with open(CONFIG_PATH) as config_data:
                 new_config_data = yaml.load(config_data, Loader=Loader) or {}
         except Exception:
             logger.exception("Config data not exists!")
