@@ -13,7 +13,7 @@ from .modules import monitoring, maintenance, configurator, fixer
 from .shared import config_request_cache
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
-MQTT_PORT = 1883
+MQTT_PORT = 8883
 
 
 class Agent(object):
@@ -33,6 +33,8 @@ class Agent(object):
         self.is_fresh_connection = True
         self.used_last_connection_sequence = True
 
+        self.subscriptions = {} # {mid: {topic: str, qos: int} } pair
+
         self.lock_thread = Lock()
 
         client = mqtt.Client(
@@ -48,11 +50,13 @@ class Agent(object):
         client.user_data_set(self.token)
 
         self.initialize_death_certificate(initial=True)
+        client.tls_set()
 
         client.on_connect = self.__on_connect
         client.on_message = self.__on_message
         client.on_disconnect = self.__on_disconnect
         client.on_log = self.__on_log
+        client.on_subscribe = self.__on_subscribe
 
     def loop(self):
         while True:
@@ -197,13 +201,46 @@ class Agent(object):
 
     def __on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            self.logger.info("Connected to the broker")
+            self.subscriptions = {}
+            self.logger.info("Connected to the broker, rc=%s", rc)
 
-            self.client.subscribe(f"device/{self.token}/directives", qos=1)
-            self.client.subscribe(f"signaling/{self.token}/request", qos=1)
+            self.__subscribe_to_topic(f"device/{self.token}/directives", qos=1)
+            self.__subscribe_to_topic(f"signaling/{self.token}/request", qos=1)
 
             self.publish_birth_certificate()
 
+    def __on_subscribe(self, client, userdata, mid, granted_qos) -> None:
+        is_subscription_successful = granted_qos[0] != 128
+
+        if is_subscription_successful:
+            self.logger.info("Subscribed to MQTT topic: %s", self.subscriptions[mid]["topic"])
+            self.subscriptions.pop(mid, None)
+            return
+
+        self.logger.warning("Subscription to MQTT topic failed: %s  RETRYING", self.subscriptions[mid]["topic"])
+        topic = self.subscriptions[mid]["topic"]
+        qos = self.subscriptions[mid]["qos"]
+        
+        self.subscriptions.pop(mid, None)
+
+        self.__subscribe_to_topic(topic, qos)
+
+    def __subscribe_to_topic(self, topic, qos=0):
+        """
+        Send SUBSCRIPTION package to mqtt broker and cache the mid, topic pair
+        """
+        result, mid = self.client.subscribe(topic, qos=qos)
+        
+        if result != 0:
+            self.__subscribe_to_topic(topic, qos)
+            return
+
+        self.subscriptions[mid] = {
+            "topic": topic,
+            "qos": qos,
+        }
+
+        self.logger.info("Sent SUBSCRIPTION mid=%s, topic=%s ", mid, topic)
 
     def __on_disconnect(self, client, userdata, rc):
         self.logger.warning("Disconnected from the broker, rc=%s", rc)
