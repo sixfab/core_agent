@@ -74,23 +74,22 @@ class Agent(object):
 
         self.client.loop_forever()
 
-    def publish_message(self, message, topic, qos=2, retain=True):
+    def publish_message(self, topic, message, qos=2, retain=True):
+        response = self.client.publish(
+            topic,
+            json.dumps(message),
+            qos=qos,
+            retain=retain,
+        )
 
-            response = self.client.publish(
-                topic,
-                json.dumps(message),
-                qos=qos,
-                retain=retain,
-            )
-
-            if response.rc == 0:
-                self.logger.info("Publish Success --> mid: %s, rc: %s", response.mid, response.rc)
-                return
-            else:
-                self.logger.error("Publish failed --> mid: %s, rc: %s", response.mid, response.rc)
-                time.sleep(0.1)
-                self.logger.error("Publish retrying...")
-                self.publish_message(topic, json.dumps(message), qos, retain)
+        if response.rc == 0:
+            self.logger.info("Publish Success --> mid: %s, rc: %s", response.mid, response.rc)
+            return
+        else:
+            self.logger.error("Publish failed --> mid: %s, rc: %s", response.mid, response.rc)
+            time.sleep(0.1)
+            self.logger.error("Publish retrying...")
+            self.publish_message(topic, message, qos, retain)
 
     def __on_message(self, client, userdata, msg):
         for function in self.configs["callbacks"]:
@@ -119,10 +118,10 @@ class Agent(object):
             if answer:
                 self.publish_message(
                     f"signaling/{self.token}/response",
-                    json.dumps({
-                        "id": requestID,
-                        "payload": b64encode(answer).decode()
-                    }),
+                    {
+                    "id": requestID,
+                    "payload": b64encode(answer).decode()
+                    },
                     qos=0,
                     retain=0
                 )
@@ -208,7 +207,7 @@ class Agent(object):
 
         self.publish_message(
             f"device/{self.token}/birth",
-            json.dumps(connect_message),
+            connect_message,
             qos=2,
             retain=True,
         )
