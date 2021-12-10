@@ -57,6 +57,7 @@ class Agent(object):
         client.on_disconnect = self.__on_disconnect
         client.on_log = self.__on_log
         client.on_subscribe = self.__on_subscribe
+        client.on_publish = self.__on_publish
 
     def loop(self):
         while True:
@@ -73,6 +74,23 @@ class Agent(object):
 
         self.client.loop_forever()
 
+    def publish_message(self, message, topic, qos=2, retain=True):
+
+            response = self.client.publish(
+                topic,
+                json.dumps(message),
+                qos=qos,
+                retain=retain,
+            )
+
+            if response.rc == 0:
+                self.logger.info("Publish Success --> mid: %s, rc: %s", response.mid, response.rc)
+                return
+            else:
+                self.logger.error("Publish failed --> mid: %s, rc: %s", response.mid, response.rc)
+                time.sleep(0.1)
+                self.logger.error("Publish retrying...")
+                self.publish_message(topic, json.dumps(message), qos, retain)
 
     def __on_message(self, client, userdata, msg):
         for function in self.configs["callbacks"]:
@@ -80,7 +98,7 @@ class Agent(object):
                 function(client, userdata, msg)
             except:
                 pass
-                
+
         topic = msg.topic.split("/")[-1]
         payload = msg.payload.decode()
 
@@ -99,12 +117,14 @@ class Agent(object):
             answer = self.terminal.request(b64decode(payload))
 
             if answer:
-                client.publish(
+                self.publish_message(
                     f"signaling/{self.token}/response",
                     json.dumps({
                         "id": requestID,
                         "payload": b64encode(answer).decode()
                     }),
+                    qos=0,
+                    retain=0
                 )
 
                 self.logger.debug("[SIGNALING] Sent response")
@@ -132,7 +152,6 @@ class Agent(object):
                     request_id = data
                     configurator.delete_configuration_request(request_id, client, self.configs)
 
-    
     def increase_connection_sequence(self):
         """
         Increases the connection sequence. This is used to identify the connection.
@@ -187,17 +206,15 @@ class Agent(object):
         if self.is_fresh_connection:
             connect_message["fresh"] = True
 
-        self.client.publish(
+        self.publish_message(
             f"device/{self.token}/birth",
             json.dumps(connect_message),
             qos=2,
             retain=True,
         )
-        
+
         self.used_last_connection_sequence = True
-
         self.logger.info("Sent birth certificate")
-
 
     def __on_connect(self, client, userdata, flags, rc):
         if rc == 0:
@@ -241,6 +258,9 @@ class Agent(object):
         }
 
         self.logger.info("Sent SUBSCRIPTION mid=%s, topic=%s ", mid, topic)
+    
+    def __on_publish(self, client, userdata, mid):
+        self.logger.info("On_publish: %s", mid) # debug purpose
 
     def __on_disconnect(self, client, userdata, rc):
         self.logger.warning("Disconnected from the broker, rc=%s", rc)
