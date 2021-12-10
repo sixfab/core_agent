@@ -75,17 +75,23 @@ class Agent(object):
         self.client.loop_forever()
 
     def publish_message(self, topic, message, qos=2, retain=True):
-        response = self.client.publish(
-            topic,
-            json.dumps(message),
-            qos=qos,
-            retain=retain,
-        )
-
-        if response.rc == 0:
-            self.logger.info("Publish Success --> mid: %s, rc: %s", response.mid, response.rc)
-            return
+        try:
+            response = self.client.publish(
+                topic,
+                json.dumps(message),
+                qos=qos,
+                retain=retain,
+            )
+        except Exception as error:
+            self.logger.error("Publish failed: %s", error)
+            time.sleep(0.1)
+            self.logger.error("Publish retrying...")
+            self.publish_message(topic, message, qos, retain)
         else:
+            if response.rc == 0:
+                self.logger.info("Publish Success --> mid: %s, rc: %s", response.mid, response.rc)
+                return
+
             self.logger.error("Publish failed --> mid: %s, rc: %s", response.mid, response.rc)
             time.sleep(0.1)
             self.logger.error("Publish retrying...")
