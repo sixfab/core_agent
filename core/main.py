@@ -85,7 +85,7 @@ class Agent(object):
         except Exception as error:
             self.logger.error("Publish failed: %s", error)
             time.sleep(0.1)
-            self.logger.error("Publish retrying...")
+            self.logger.debug("Publish retrying...")
             self.publish_message(topic, message, qos, retain)
         else:
             if response.rc == 0:
@@ -94,7 +94,7 @@ class Agent(object):
 
             self.logger.error("Publish failed --> mid: %s, rc: %s", response.mid, response.rc)
             time.sleep(0.1)
-            self.logger.error("Publish retrying...")
+            self.logger.debug("Publish retrying...")
             self.publish_message(topic, message, qos, retain)
 
     def __on_message(self, client, userdata, msg):
@@ -265,7 +265,8 @@ class Agent(object):
         self.logger.info("Sent SUBSCRIPTION mid=%s, topic=%s ", mid, topic)
     
     def __on_publish(self, client, userdata, mid):
-        self.logger.info("On_publish: %s", mid) # debug purpose
+        # self.logger.info("On_publish: %s", mid)
+        pass
 
     def __on_disconnect(self, client, userdata, rc):
         self.logger.warning("Disconnected from the broker, rc=%s", rc)
