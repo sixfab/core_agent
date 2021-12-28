@@ -1,2 +1,3 @@
 paho-mqtt==1.5.1
 PyYAML==5.4.1
+request==2.25.0

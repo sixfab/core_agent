@@ -26,7 +26,7 @@ class Agent(object):
         self.logger = logger.initialize_logger()
         self.configs["logger"] = self.logger
 
-        bulk.check_bulk_deployment(self.configs, "/opt/sixfab/.env.yaml")
+        bulk.check_bulk_deployment(self.configs)
 
         self.token = self.configs["token"]
         self.monitoring_thread = None
