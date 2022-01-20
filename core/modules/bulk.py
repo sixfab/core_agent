@@ -44,7 +44,6 @@ def do_token_exchange(configs):
         raise RuntimeError("Error occured while reading yaml file: %s", error)
 
     sim_iccid = system_yaml_data.get("iccid", None)
-    sim_iccid = "89883070000004441489" #debug
 
     if sim_iccid is None:
         raise RuntimeError("SIM ICCID couldn't find!")
