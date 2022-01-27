@@ -20,7 +20,7 @@ def check_bulk_deployment(configs):
             delay_time = bulk_cache_control()
         except Exception as err:
             logger.info(err)
-            time.sleep(60*60*24*365)
+            delay_time = 60*60*24*365
 
         if "b_token" in configs:
             logger.info("Bulk deployment started. BToken: %s", configs["b_token"])
