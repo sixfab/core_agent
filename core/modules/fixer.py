@@ -24,3 +24,4 @@ execute_fix("150421-plugdev-group.2", r'PERMISSIONS_TO_ADD="SUBSYSTEM==\"usb\", 
 execute_fix("301021-install-route", r'while :;do command -v route;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install net-tools -y;done')
 execute_fix("301021-install-lshw", r'while :;do command -v lshw;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install lshw -y;done')
 execute_fix("081021-update-atcomv2", r'sudo pip3 install -U atcom')
+execute_fix("281221-env-file-permission", r'sudo chown -R sixfab:sixfab /opt/sixfab/.env.yaml')
