@@ -9,7 +9,7 @@ from base64 import b64decode, b64encode
 
 from .modules import pty
 from .helpers import network, logger
-from .modules import monitoring, maintenance, configurator, fixer
+from .modules import monitoring, maintenance, configurator, fixer, bulk
 from .shared import config_request_cache
 
 MQTT_HOST = "mqtt.connect.sixfab.com"
@@ -23,9 +23,12 @@ class Agent(object):
     ):
         configs["core"]["callbacks"] = []
         self.configs = configs["core"]
-        self.token = self.configs["token"]
         self.logger = logger.initialize_logger()
         self.configs["logger"] = self.logger
+
+        bulk.check_bulk_deployment(self.configs)
+
+        self.token = self.configs["token"]
         self.monitoring_thread = None
 
         self.connection_sequence = 0

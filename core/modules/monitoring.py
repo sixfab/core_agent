@@ -20,6 +20,7 @@ SYSTEM_PATH = f"{USER_PATH}/.core/system.yaml"
 MONITOR_PATH = f"{USER_PATH}/.core/monitor.yaml"
 CONFIG_PATH = f"{USER_PATH}/.core/configs/config.yaml"
 CONFIGS_REQUEST_PATH = f"{USER_PATH}/.core/configs/request"
+GEOLOCATION_PATH = f"{USER_PATH}/.core/geolocation.yaml"
 
 
 def _check_configuration_requests(mqtt_client, configs):
@@ -61,6 +62,7 @@ def loop(mqttClient, configs):
     last_monitoring_data = {}
     last_system_data = {}
     last_config_data = {}
+    last_geolocation_data = {}
 
 
     def callback(client, userdata, msg):
@@ -94,6 +96,11 @@ def loop(mqttClient, configs):
                 elif data["type"] == "data_config":
                     last_config_data.update(data["data"])
                     logger.debug("Updated last config data")
+
+                elif data["type"] == "data_geolocation":
+                    data["data"].pop("last_update", None)
+                    last_geolocation_data.update(data["data"])
+                    logger.debug("Updated last geolocation data")
 
 
 
@@ -232,6 +239,44 @@ def loop(mqttClient, configs):
             else:
                 logger.debug("Skipping config data, couldn't find any changes.")
 
+
+        # GEOLOCATION DATA
+        new_geolocation_data = None
+        try:
+            with open(GEOLOCATION_PATH) as geolocation_data:
+                new_geolocation_data = yaml.load(geolocation_data, Loader=Loader) or {}
+        except Exception:
+            logger.exception("Geolocation data not exists!")
+
+        if new_geolocation_data:
+            new_geolocation_data.pop("last_update", None)
+            data_to_send = {}
+
+            for key, value in new_geolocation_data.items():
+                last_value = last_geolocation_data.get(key, "N/A")
+
+                if value != last_value:
+                    data_to_send[key] = value
+
+            if data_to_send:
+                mid = uuid4().hex[-4:]
+
+                message_body = dict(
+                    type="data_geolocation",
+                    data=data_to_send,
+                    mid=mid
+                )
+
+                message_response = mqttClient.publish(
+                    f"device/{configs['token']}/hive",
+                    json.dumps(message_body)
+                )
+                print(message_body, message_response)
+                message_cache[mid] = message_body
+
+                logger.debug("Sending new geolocation data")
+            else:
+                logger.debug("Skipping geolocation data, couldn't find any changes.")
 
 
         time.sleep(CONTROL_INTERVAL)
