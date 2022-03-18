@@ -11,7 +11,8 @@ from core.helpers.yamlio import(
     MONITOR_PATH,
     CONFIG_PATH,
     CONFIG_REQUEST_PATH,
-    GEOLOCATION_PATH
+    GEOLOCATION_PATH,
+    DIAG_PATH
 )
 
 try:
@@ -48,7 +49,7 @@ def _check_configuration_requests(mqtt_client, configs):
         logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=received, request_id={request_id}")
 
         mqtt_client.publish(
-            f"device/{configs['token']}/hive", 
+            f"device/{configs['token']}/hive",
             json.dumps({
                 "type": "config",
                 "data": {
@@ -115,6 +116,7 @@ def loop(mqttClient, configs):
     last_system_data = {}
     last_config_data = {}
     last_geolocation_data = {}
+    last_diagnostic_data = {}
 
 
     def callback(client, userdata, msg):
@@ -153,6 +155,11 @@ def loop(mqttClient, configs):
                     data["data"].pop("last_update", None)
                     last_geolocation_data.update(data["data"])
                     logger.debug("Updated last geolocation data")
+
+                elif data["type"] == "data_diagnostic":
+                    data["data"].pop("last_update", None)
+                    last_diagnostic_data.update(data["data"])
+                    logger.debug("Updated last diagnostic data")
 
 
     configs["callbacks"].append(callback)
@@ -209,8 +216,17 @@ def loop(mqttClient, configs):
             logger=logger
             )
 
-        time.sleep(CONTROL_INTERVAL)
+        # DIAGNOSTIC DATA
+        check_file_and_update_cloud(
+            file_path=DIAG_PATH,
+            last_data=last_diagnostic_data,
+            data_type="data_diagnostic",
+            mqtt_client=mqttClient,
+            configs=configs,
+            logger=logger
+            )
 
+        time.sleep(CONTROL_INTERVAL)
 
 def main(mqttClient, configs):
     while True:
