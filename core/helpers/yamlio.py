@@ -1,7 +1,6 @@
 import os.path
 import yaml
 
-
 ENV_PATH = "/opt/sixfab/.env.yaml"
 USER_FOLDER_PATH =  os.path.expanduser("~")
 CORE_FOLDER_PATH = f"{USER_FOLDER_PATH}/.core"
@@ -12,6 +11,8 @@ BULK_CACHE= f"{CORE_FOLDER_PATH}/bulk.yaml"
 CONFIG_FOLDER_PATH = f"{CORE_FOLDER_PATH}/configs"
 CONFIG_PATH = f"{CONFIG_FOLDER_PATH}/config.yaml"
 CONFIG_REQUEST_PATH = f"{CONFIG_FOLDER_PATH}/request"
+DIAG_FOLDER_PATH = f"{CORE_FOLDER_PATH}/diagnostics"
+DIAG_PATH = f"{DIAG_FOLDER_PATH}/diagnostic.yaml"
 
 
 def read_yaml_all(file):
