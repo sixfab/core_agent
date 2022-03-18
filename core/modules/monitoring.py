@@ -2,10 +2,10 @@ import os
 import time
 import json
 from uuid import uuid4
-import yaml
 
 from core.__version__ import version
 from core.shared import config_request_cache
+from core.helpers.yamlio import read_yaml_all
 from core.helpers.yamlio import(
     SYSTEM_PATH,
     MONITOR_PATH,
@@ -14,11 +14,6 @@ from core.helpers.yamlio import(
     GEOLOCATION_PATH,
     DIAG_PATH
 )
-
-try:
-    from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-    from yaml import Loader, Dumper
 
 
 CONTROL_INTERVAL=30
@@ -41,9 +36,8 @@ def _check_configuration_requests(mqtt_client, configs):
         if file_name in config_request_cache:
             request_id = config_request_cache[file_name]
         else:
-            file_content = open(f"{CONFIG_REQUEST_PATH}/{file_name}")
-            request_id = yaml.load(file_content, Loader=Loader)["id"]
-
+            file_path = f"{CONFIG_REQUEST_PATH}/{file_name}"
+            request_id = read_yaml_all(file_path)["id"]
             config_request_cache[file_name] = request_id
 
         logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=received, request_id={request_id}")
@@ -71,9 +65,12 @@ def check_file_and_update_cloud(
 
     mqtt_channel = f"device/{configs['token']}/hive"
     new_data = None
+
+    if data_type == "data_diagnostic" and not os.path.exists(file_path):
+        return
+
     try:
-        with open(file_path) as file_data:
-            new_data = yaml.load(file_data, Loader=Loader) or {}
+        new_data = read_yaml_all(file_path)
     except Exception:
         logger.exception("%s not exists!", data_type)
 
