@@ -60,8 +60,21 @@ def check_file_and_update_cloud(
     data_type,
     mqtt_client,
     configs,
-    logger
+    only_changed_values = True
     ):
+    """
+        parameters:
+            file_path: path of file
+            last_data: last cached/sent data
+            data_type: type of data, for example data_system or data_monitoring
+            mqtt_client: main mqtt class
+            configs: global configs object
+            only_changed_values: If true, agent will send only changed values. 
+                                 Otherwise it will send whole data when a value 
+                                 changed from data. 
+    """
+
+    logger = configs["logger"]
 
     mqtt_channel = f"device/{configs['token']}/hive"
     new_data = None
@@ -80,11 +93,15 @@ def check_file_and_update_cloud(
         new_data.pop("last_update", None)
         data_to_send = {}
 
-        for key, value in new_data.items():
-            last_value = last_data.get(key, "N/A")
+        if only_changed_values:
+            for key, value in new_data.items():
+                last_value = last_data.get(key, "N/A")
 
-            if value != last_value:
-                data_to_send[key] = value
+                if value != last_value:
+                    data_to_send[key] = value
+
+        else:
+            data_to_send = new_data
 
         if data_to_send:
             mid = uuid4().hex[-4:]
@@ -102,7 +119,7 @@ def check_file_and_update_cloud(
 
             message_cache[mid] = message_body
 
-            logger.debug("Sending new %s : %s", data_type, message_response)
+            logger.debug("Sending new %s : %s, only_changed_values=%s", data_type, message_response, only_changed_values)
         else:
             logger.debug("Skipping %s, couldn't find any changes.", data_type)
 
@@ -179,9 +196,8 @@ def loop(mqttClient, configs):
             last_data=last_monitoring_data,
             data_type="data_monitoring",
             mqtt_client=mqttClient,
-            configs=configs,
-            logger=logger
-            )
+            configs=configs
+        )
 
         # SYSTEM DATA
         check_file_and_update_cloud(
@@ -189,9 +205,8 @@ def loop(mqttClient, configs):
             last_data=last_system_data,
             data_type="data_system",
             mqtt_client=mqttClient,
-            configs=configs,
-            logger=logger
-            )
+            configs=configs
+        )
 
         # CONFIG DATA
         check_file_and_update_cloud(
@@ -199,9 +214,8 @@ def loop(mqttClient, configs):
             last_data=last_config_data,
             data_type="data_config",
             mqtt_client=mqttClient,
-            configs=configs,
-            logger=logger
-            )
+            configs=configs
+        )
 
         # GEOLOCATION DATA
         check_file_and_update_cloud(
@@ -210,8 +224,8 @@ def loop(mqttClient, configs):
             data_type="data_geolocation",
             mqtt_client=mqttClient,
             configs=configs,
-            logger=logger
-            )
+            only_changed_values=False
+        )
 
         # DIAGNOSTIC DATA
         check_file_and_update_cloud(
@@ -220,8 +234,8 @@ def loop(mqttClient, configs):
             data_type="data_diagnostic",
             mqtt_client=mqttClient,
             configs=configs,
-            logger=logger
-            )
+            only_changed_values=False
+        )
 
         time.sleep(CONTROL_INTERVAL)
 
