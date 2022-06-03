@@ -93,14 +93,14 @@ def check_file_and_update_cloud(
         new_data.pop("last_update", None)
         data_to_send = {}
 
-        if only_changed_values:
-            for key, value in new_data.items():
-                last_value = last_data.get(key, "N/A")
+        for key, value in new_data.items():
+            last_value = last_data.get(key, "N/A")
 
-                if value != last_value:
-                    data_to_send[key] = value
+            if value != last_value:
+                data_to_send[key] = value
 
-        else:
+        if not only_changed_values and data_to_send:
+            # if a data changed and only_changed_values=False, send whole data
             data_to_send = new_data
 
         if data_to_send:
