@@ -227,15 +227,15 @@ def loop(mqttClient, configs):
             only_changed_values=False
         )
 
-        # DIAGNOSTIC DATA
-        check_file_and_update_cloud(
-            file_path=DIAG_PATH,
-            last_data=last_diagnostic_data,
-            data_type="data_diagnostic",
-            mqtt_client=mqttClient,
-            configs=configs,
-            only_changed_values=False
-        )
+        # # DIAGNOSTIC DATA
+        # check_file_and_update_cloud(
+        #     file_path=DIAG_PATH,
+        #     last_data=last_diagnostic_data,
+        #     data_type="data_diagnostic",
+        #     mqtt_client=mqttClient,
+        #     configs=configs,
+        #     only_changed_values=False
+        # )
 
         time.sleep(CONTROL_INTERVAL)
 
