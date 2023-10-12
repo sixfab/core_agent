@@ -5,11 +5,13 @@ if not os.path.exists("/opt/sixfab/core/.fixes"):
     os.system("sudo touch /opt/sixfab/core/.fixes")
 
 
-def execute_fix(name, command):
+def execute_fix(name, command, retry=False):
     if name in fixes_list:
         return
 
-    os.system("echo {} | sudo tee -a /opt/sixfab/core/.fixes".format(name))
+    if not retry:
+        os.system("echo {} | sudo tee -a /opt/sixfab/core/.fixes".format(name))
+    
     call(command, shell=True, executable='/bin/bash')
 
 try:
@@ -25,3 +27,6 @@ execute_fix("301021-install-route", r'while :;do command -v route;if [ $? -eq "0
 execute_fix("301021-install-lshw", r'while :;do command -v lshw;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install lshw -y;done')
 execute_fix("081021-update-atcomv2", r'sudo pip3 install -U atcom')
 execute_fix("281221-env-file-permission", r'sudo chown -R sixfab:sixfab /opt/sixfab/.env.yaml')
+
+# Check modemmanager existance for each restart of service and remove it if exist
+execute_fix("121023-modemmanager", r'sudo apt purge modemmanager -y', retry=True)
