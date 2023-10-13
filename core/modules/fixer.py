@@ -9,11 +9,10 @@ def execute_fix(name, command, retry=False):
     if name in fixes_list:
         return
 
-    ret = call(command, shell=True, executable='/bin/bash')
+    call(command, shell=True, executable='/bin/bash')
 
-    if ret == 0:
-        if not retry:
-            os.system("echo {} | sudo tee -a /opt/sixfab/core/.fixes".format(name))
+    if not retry:
+        os.system("echo {} | sudo tee -a /opt/sixfab/core/.fixes".format(name))
 
 try:
     fixes_list = check_output(["sudo", "cat", "/opt/sixfab/core/.fixes"]).decode().split("\n")
