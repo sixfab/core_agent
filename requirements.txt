@@ -1,4 +1,3 @@
 paho-mqtt==1.5.1
 PyYAML==6.0
 requests==2.26
-atcom == 0.4.1
