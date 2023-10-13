@@ -26,6 +26,7 @@ execute_fix("150421-plugdev-group.2", r'PERMISSIONS_TO_ADD="SUBSYSTEM==\"usb\", 
 execute_fix("301021-install-route", r'while :;do command -v route;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install net-tools -y;done')
 execute_fix("301021-install-lshw", r'while :;do command -v lshw;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install lshw -y;done')
 execute_fix("281221-env-file-permission", r'sudo chown -R sixfab:sixfab /opt/sixfab/.env.yaml')
+execute_fix("131023-bookworm-virtual-env-fix", r'pwd; sudo bash core/modules/fixes/131023-bookworm-virtual-env-fix.sh')
 
 # Check modemmanager existance for each restart of service and remove it if exist
 execute_fix("121023-modemmanager", r'sudo apt purge modemmanager -y', retry=True)
