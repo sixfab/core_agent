@@ -1,0 +1,13 @@
+[Unit]
+Description=Sixfab Core Agent
+
+[Service]
+User=sixfab
+Group=sudo
+Restart=always
+RestartSec=3
+WorkingDirectory=AGENT_SOURCE_PATH
+ExecStart=/bin/bash AGENT_SOURCE_PATH/run.sh
+
+[Install]
+WantedBy=multi-user.target"
