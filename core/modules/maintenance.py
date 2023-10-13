@@ -21,7 +21,9 @@ def update_service(service, beta_enabled, logger, mqtt_client, token):
         "sudo git fetch",
         "sudo git pull",
         "sudo git checkout dev" if beta_enabled else "sudo git checkout master",
-        "sudo pip3 install -U -r requirements.txt"
+        f"source /opt/sixfab/core/{service}/venv/bin/activate"
+        "pip3 install -U -r requirements.txt"
+        "deactivate"
     ]
 
     os.system(" && ".join(commands))
