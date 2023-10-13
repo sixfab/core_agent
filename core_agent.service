@@ -10,4 +10,4 @@ WorkingDirectory=AGENT_SOURCE_PATH
 ExecStart=/bin/bash AGENT_SOURCE_PATH/run.sh
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target
