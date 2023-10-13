@@ -18,7 +18,10 @@ pip3 install -r $MANAGER_SOURCE_PATH/requirements.txt
 deactivate
 
 # Update service files
+sed -i "s|AGENT_SOURCE_PATH|$AGENT_SOURCE_PATH|g" $AGENT_SOURCE_PATH/core_agent.service
 sudo mv $AGENT_SOURCE_PATH/core_agent.service /etc/systemd/system/core_agent.service
+
+sed -i "s|MANAGER_SOURCE_PATH|$MANAGER_SOURCE_PATH|g" $MANAGER_SOURCE_PATH/core_manager.service
 sudo mv $MANAGER_SOURCE_PATH/core_manager.service /etc/systemd/system/core_manager.service
 sudo systemctl daemon-reload
 

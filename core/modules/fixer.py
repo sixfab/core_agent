@@ -9,10 +9,11 @@ def execute_fix(name, command, retry=False):
     if name in fixes_list:
         return
 
-    if not retry:
-        os.system("echo {} | sudo tee -a /opt/sixfab/core/.fixes".format(name))
-    
-    call(command, shell=True, executable='/bin/bash')
+    ret = call(command, shell=True, executable='/bin/bash')
+
+    if ret == 0:
+        if not retry:
+            os.system("echo {} | sudo tee -a /opt/sixfab/core/.fixes".format(name))
 
 try:
     fixes_list = check_output(["sudo", "cat", "/opt/sixfab/core/.fixes"]).decode().split("\n")
@@ -26,7 +27,7 @@ execute_fix("150421-plugdev-group.2", r'PERMISSIONS_TO_ADD="SUBSYSTEM==\"usb\", 
 execute_fix("301021-install-route", r'while :;do command -v route;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install net-tools -y;done')
 execute_fix("301021-install-lshw", r'while :;do command -v lshw;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install lshw -y;done')
 execute_fix("281221-env-file-permission", r'sudo chown -R sixfab:sixfab /opt/sixfab/.env.yaml')
-execute_fix("131023-bookworm-virtual-env-fix", r'pwd; sudo bash core/modules/fixes/131023-bookworm-virtual-env-fix.sh')
+execute_fix("131023-bookworm-virtual-env-fix", r'sudo bash /opt/sixfab/core/agent/core/modules/fixes/131023-bookworm-virtual-env-fix.sh')
 
 # Check modemmanager existance for each restart of service and remove it if exist
 execute_fix("121023-modemmanager", r'sudo apt purge modemmanager -y', retry=True)
