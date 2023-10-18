@@ -1,18 +1,24 @@
 import os
-import yaml
-import json
 from time import time
+import json
+import yaml
+
 from core.shared import config_request_cache
+from core.helpers.yamlio import(
+    USER_FOLDER_PATH,
+    CORE_FOLDER_PATH,
+    CONFIG_FOLDER_PATH,
+    CONFIG_REQUEST_PATH
+)
 
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
 
-CONFIGS_PATH = "/home/sixfab/.core/configs/request"
 
 def _check_configurations_folder():
-    paths = ["/home/sixfab", "/home/sixfab/.core", "/home/sixfab/.core/configs", "/home/sixfab/.core/configs/request"]
+    paths = [USER_FOLDER_PATH, CORE_FOLDER_PATH, CONFIG_FOLDER_PATH, CONFIG_REQUEST_PATH]
 
     for path in paths:
         if not os.path.exists(path):
@@ -33,7 +39,7 @@ def create_configuration_request(data, mqtt_client, configs):
         f"[CONFIGURATOR] Creating configuration request, request_id={request_id}"
     )
 
-    with open(f"{CONFIGS_PATH}/config_request_{timestamp}.yaml", "w+") as request_file:
+    with open(f"{CONFIG_REQUEST_PATH}/config_request_{timestamp}.yaml", "w+") as request_file:
         request_file.write(
             yaml.dump(
                 {
@@ -60,7 +66,7 @@ def create_configuration_request(data, mqtt_client, configs):
     logger.info(
         f"[CONFIGURATOR] Created configuration request, request_id={request_id}"
     )
-    
+
 
 def delete_configuration_request(request_id, mqtt_client, configs):
     logger = configs["logger"]
@@ -76,8 +82,8 @@ def delete_configuration_request(request_id, mqtt_client, configs):
     if not request_file_name:
         logger.error(f"[CONFIGURATOR] Couldn't find configuration request file for request_id={request_id}")
 
-    if not os.path.exists(f"{CONFIGS_PATH}/{request_file_name}"):
+    if not os.path.exists(f"{CONFIG_REQUEST_PATH}/{request_file_name}"):
         logger.error(f"[CONFIGURATOR] Couldn't find configuration request file for file_name={request_file_name}")
 
-    os.remove(f"{CONFIGS_PATH}/{request_file_name}")
+    os.remove(f"{CONFIG_REQUEST_PATH}/{request_file_name}")
     logger.info(f"[CONFIGURATOR] Deleted configuration request file, file_name={request_file_name}")

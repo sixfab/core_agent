@@ -3,14 +3,23 @@ import yaml
 
 ENV_PATH = "/opt/sixfab/.env.yaml"
 USER_FOLDER_PATH =  os.path.expanduser("~")
-CORE_FOLDER_PATH = f"{USER_FOLDER_PATH}/.core/"
+CORE_FOLDER_PATH = f"{USER_FOLDER_PATH}/.core"
 SYSTEM_PATH = f"{CORE_FOLDER_PATH}/system.yaml"
+MONITOR_PATH = f"{CORE_FOLDER_PATH}/monitor.yaml"
+GEOLOCATION_PATH = f"{CORE_FOLDER_PATH}/geolocation.yaml"
 BULK_CACHE= f"{CORE_FOLDER_PATH}/bulk.yaml"
+CONFIG_FOLDER_PATH = f"{CORE_FOLDER_PATH}/configs"
+CONFIG_PATH = f"{CONFIG_FOLDER_PATH}/config.yaml"
+CONFIG_REQUEST_PATH = f"{CONFIG_FOLDER_PATH}/request"
+DIAG_FOLDER_PATH = f"{CORE_FOLDER_PATH}/diagnostics"
+DIAG_PATH = f"{DIAG_FOLDER_PATH}/diagnostic.yaml"
+
 
 def read_yaml_all(file):
     with open(file) as yaml_file:
         data = yaml.safe_load(yaml_file)
         return data or {}
+
 
 def write_yaml_all(file, items, clear = True):
     if clear is True:

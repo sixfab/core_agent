@@ -1,36 +1,33 @@
 import os
-import yaml
-import json
 import time
+import json
 from uuid import uuid4
 
 from core.__version__ import version
 from core.shared import config_request_cache
-
-try:
-    from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-    from yaml import Loader, Dumper
+from core.helpers.yamlio import read_yaml_all
+from core.helpers.yamlio import(
+    SYSTEM_PATH,
+    MONITOR_PATH,
+    CONFIG_PATH,
+    CONFIG_REQUEST_PATH,
+    GEOLOCATION_PATH,
+    DIAG_PATH
+)
 
 
 CONTROL_INTERVAL=30
 message_cache = {} # key, value pattern for each mid, message_body
-USER_PATH = os.path.expanduser("~")
-SYSTEM_PATH = f"{USER_PATH}/.core/system.yaml"
-MONITOR_PATH = f"{USER_PATH}/.core/monitor.yaml"
-CONFIG_PATH = f"{USER_PATH}/.core/configs/config.yaml"
-CONFIGS_REQUEST_PATH = f"{USER_PATH}/.core/configs/request"
-GEOLOCATION_PATH = f"{USER_PATH}/.core/geolocation.yaml"
 
 
 def _check_configuration_requests(mqtt_client, configs):
     logger = configs["logger"]
 
-    if not os.path.exists(CONFIGS_REQUEST_PATH):
+    if not os.path.exists(CONFIG_REQUEST_PATH):
         logger.debug("[CONFIGURATOR] Configs folder not found, skip for now")
         return
 
-    files = os.listdir(CONFIGS_REQUEST_PATH)
+    files = os.listdir(CONFIG_REQUEST_PATH)
 
     for file_name in files:
         if not file_name.endswith("_done"):
@@ -39,15 +36,14 @@ def _check_configuration_requests(mqtt_client, configs):
         if file_name in config_request_cache:
             request_id = config_request_cache[file_name]
         else:
-            file_content = open(f"{CONFIGS_REQUEST_PATH}/{file_name}")
-            request_id = yaml.load(file_content, Loader=Loader)["id"]
-
+            file_path = f"{CONFIG_REQUEST_PATH}/{file_name}"
+            request_id = read_yaml_all(file_path)["id"]
             config_request_cache[file_name] = request_id
 
         logger.info(f"[CONFIGURATOR] Sending status update to cloud, status=received, request_id={request_id}")
 
         mqtt_client.publish(
-            f"device/{configs['token']}/hive", 
+            f"device/{configs['token']}/hive",
             json.dumps({
                 "type": "config",
                 "data": {
@@ -57,12 +53,84 @@ def _check_configuration_requests(mqtt_client, configs):
             })
         )
 
+
+def check_file_and_update_cloud(
+    file_path,
+    last_data,
+    data_type,
+    mqtt_client,
+    configs,
+    only_changed_values = True
+    ):
+    """
+        parameters:
+            file_path: path of file
+            last_data: last cached/sent data
+            data_type: type of data, for example data_system or data_monitoring
+            mqtt_client: main mqtt class
+            configs: global configs object
+            only_changed_values: If true, agent will send only changed values. 
+                                 Otherwise it will send whole data when a value 
+                                 changed from data. 
+    """
+
+    logger = configs["logger"]
+
+    mqtt_channel = f"device/{configs['token']}/hive"
+    new_data = None
+
+    if data_type == "data_diagnostic" and not os.path.exists(file_path):
+        return
+
+    try:
+        new_data = read_yaml_all(file_path)
+    except Exception:
+        logger.exception("%s not exists!", data_type)
+
+    if new_data:
+        if data_type == "data_system":
+            new_data["agent_version"] = version
+        new_data.pop("last_update", None)
+        data_to_send = {}
+
+        for key, value in new_data.items():
+            last_value = last_data.get(key, "N/A")
+
+            if value != last_value:
+                data_to_send[key] = value
+
+        if not only_changed_values and data_to_send:
+            # if a data changed and only_changed_values=False, send whole data
+            data_to_send = new_data
+
+        if data_to_send:
+            mid = uuid4().hex[-4:]
+
+            message_body = dict(
+                type=data_type,
+                data=data_to_send,
+                mid=mid
+            )
+
+            message_response = mqtt_client.publish(
+                mqtt_channel,
+                json.dumps(message_body)
+            )
+
+            message_cache[mid] = message_body
+
+            logger.debug("Sending new %s : %s, only_changed_values=%s", data_type, message_response, only_changed_values)
+        else:
+            logger.debug("Skipping %s, couldn't find any changes.", data_type)
+
+
 def loop(mqttClient, configs):
     logger = configs["logger"]
     last_monitoring_data = {}
     last_system_data = {}
     last_config_data = {}
     last_geolocation_data = {}
+    last_diagnostic_data = {}
 
 
     def callback(client, userdata, msg):
@@ -102,10 +170,13 @@ def loop(mqttClient, configs):
                     last_geolocation_data.update(data["data"])
                     logger.debug("Updated last geolocation data")
 
+                elif data["type"] == "data_diagnostic":
+                    data["data"].pop("last_update", None)
+                    last_diagnostic_data.update(data["data"])
+                    logger.debug("Updated last diagnostic data")
 
 
     configs["callbacks"].append(callback)
-
 
     while True:
         if not mqttClient.is_connected():
@@ -119,172 +190,58 @@ def loop(mqttClient, configs):
         except:
             logger.exception("[MONITORING] Raised an exception during configuration monitoring")
 
-
         # MONITOR DATA
-        new_monitoring_data = None
-        try:
-            with open(MONITOR_PATH) as monitor_data:
-                new_monitoring_data = yaml.load(monitor_data, Loader=Loader) or {}
-        except Exception:
-            logger.exception("Monitoring data not exists!")
-
-        if new_monitoring_data:
-            new_monitoring_data.pop("last_update", None)
-            data_to_send = {}
-
-            for key, value in new_monitoring_data.items():
-                last_value = last_monitoring_data.get(key, "N/A")
-
-                if value != last_value:
-                    data_to_send[key] = value
-
-            if data_to_send:
-                mid = uuid4().hex[-4:]
-
-                message_body = dict(
-                    type="data_monitoring",
-                    data=data_to_send,
-                    mid=mid
-                )
-
-                message_response = mqttClient.publish(
-                    f"device/{configs['token']}/hive",
-                    json.dumps(message_body)
-                )
-
-                message_cache[mid] = message_body
-
-                logger.debug("Sending new monitoring data")
-            else:
-                logger.debug("Skipping monitoring data, couldn't find any changes.")
-
+        check_file_and_update_cloud(
+            file_path=MONITOR_PATH,
+            last_data=last_monitoring_data,
+            data_type="data_monitoring",
+            mqtt_client=mqttClient,
+            configs=configs
+        )
 
         # SYSTEM DATA
-        new_system_data = None
-        try:
-            with open(SYSTEM_PATH) as system_data:
-                new_system_data = yaml.load(system_data, Loader=Loader) or {}
-        except Exception:
-            logger.exception("System data not exists!")
-
-        if new_system_data:
-            new_system_data["agent_version"] = version
-            new_system_data.pop("last_update", None)
-    
-            data_to_send = {}
-    
-            for key, value in new_system_data.items():
-                last_value = last_system_data.get(key, "N/A")
-
-                if value != last_value:
-                    data_to_send[key] = value
-    
-    
-            if data_to_send:
-                mid = uuid4().hex[-4:]
-
-                message_body = dict(
-                    type="data_system",
-                    data=data_to_send,
-                    mid=mid
-                )
-
-                message_response = mqttClient.publish(
-                    f"device/{configs['token']}/hive", 
-                    json.dumps(message_body)
-                )
-
-                message_cache[mid] = message_body
-    
-                logger.debug("Sending new system data")
-            else:
-                logger.debug("Skipping system data, couldn't find any changes.")
-
+        check_file_and_update_cloud(
+            file_path=SYSTEM_PATH,
+            last_data=last_system_data,
+            data_type="data_system",
+            mqtt_client=mqttClient,
+            configs=configs
+        )
 
         # CONFIG DATA
-        new_config_data = None
-        try:
-            with open(CONFIG_PATH) as config_data:
-                new_config_data = yaml.load(config_data, Loader=Loader) or {}
-        except Exception:
-            logger.exception("Config data not exists!")
-
-        if new_config_data:
-            data_to_send = {}
-    
-            for key, value in new_config_data.items():
-                last_value = last_config_data.get(key, "N/A")
-
-                if value != last_value:
-                    data_to_send[key] = value
-    
-    
-            if data_to_send:
-                mid = uuid4().hex[-4:]
-
-                message_body = dict(
-                    type="data_config",
-                    data=data_to_send,
-                    mid=mid
-                )
-
-                message_response = mqttClient.publish(
-                    f"device/{configs['token']}/hive", 
-                    json.dumps(message_body)
-                )
-
-                message_cache[mid] = message_body
-    
-                logger.debug("Sending new config data")
-            else:
-                logger.debug("Skipping config data, couldn't find any changes.")
-
+        check_file_and_update_cloud(
+            file_path=CONFIG_PATH,
+            last_data=last_config_data,
+            data_type="data_config",
+            mqtt_client=mqttClient,
+            configs=configs
+        )
 
         # GEOLOCATION DATA
-        new_geolocation_data = None
-        try:
-            with open(GEOLOCATION_PATH) as geolocation_data:
-                new_geolocation_data = yaml.load(geolocation_data, Loader=Loader) or {}
-        except Exception:
-            logger.exception("Geolocation data not exists!")
+        check_file_and_update_cloud(
+            file_path=GEOLOCATION_PATH,
+            last_data=last_geolocation_data,
+            data_type="data_geolocation",
+            mqtt_client=mqttClient,
+            configs=configs,
+            only_changed_values=False
+        )
 
-        if new_geolocation_data:
-            new_geolocation_data.pop("last_update", None)
-            data_to_send = {}
-
-            for key, value in new_geolocation_data.items():
-                last_value = last_geolocation_data.get(key, "N/A")
-
-                if value != last_value:
-                    data_to_send[key] = value
-
-            if data_to_send:
-                mid = uuid4().hex[-4:]
-
-                message_body = dict(
-                    type="data_geolocation",
-                    data=data_to_send,
-                    mid=mid
-                )
-
-                message_response = mqttClient.publish(
-                    f"device/{configs['token']}/hive",
-                    json.dumps(message_body)
-                )
-                print(message_body, message_response)
-                message_cache[mid] = message_body
-
-                logger.debug("Sending new geolocation data")
-            else:
-                logger.debug("Skipping geolocation data, couldn't find any changes.")
-
+        # # DIAGNOSTIC DATA
+        # check_file_and_update_cloud(
+        #     file_path=DIAG_PATH,
+        #     last_data=last_diagnostic_data,
+        #     data_type="data_diagnostic",
+        #     mqtt_client=mqttClient,
+        #     configs=configs,
+        #     only_changed_values=False
+        # )
 
         time.sleep(CONTROL_INTERVAL)
-
 
 def main(mqttClient, configs):
     while True:
         try:
             loop(mqttClient, configs)
-        except Exception as e:
+        except:
             configs["logger"].exception("[MONITORING] Raised an error from monitoring thread")
