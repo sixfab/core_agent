@@ -6,6 +6,7 @@ MANAGER_SOURCE_PATH="$CORE_PATH/manager"
 AGENT_SOURCE_PATH="$CORE_PATH/agent"
 
 # Install python3-venv
+sud apt update
 sudo apt install python3-venv -y
 
 # Install agent requirements
