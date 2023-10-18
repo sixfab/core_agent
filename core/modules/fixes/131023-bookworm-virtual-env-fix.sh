@@ -5,6 +5,9 @@ CORE_PATH="$SIXFAB_PATH/core"
 MANAGER_SOURCE_PATH="$CORE_PATH/manager"
 AGENT_SOURCE_PATH="$CORE_PATH/agent"
 
+# Install python3-venv
+sudo apt install python3-venv -y
+
 # Install agent requirements
 python3 -m venv $AGENT_SOURCE_PATH/venv
 source $AGENT_SOURCE_PATH/venv/bin/activate
