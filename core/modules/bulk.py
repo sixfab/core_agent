@@ -53,7 +53,13 @@ def do_token_exchange(configs):
     'iccid': sim_iccid
     }
 
-    res = requests.post('https://api.sixfab.com/v1/core/deploy', data=json.dumps(req))
+    api_url = "https://api.sixfab.com/v1/core/deploy"
+
+    if "MQTT_HOST" in configs and "dev" in configs["MQTT_HOST"]:
+        # core working on dev environment, change the api host
+        api_url = "https://api.sixfab.dev/v1/core/deploy"
+
+    res = requests.post(api_url, data=json.dumps(req))
 
     if res.status_code == 200 or res.status_code == 201:
 
