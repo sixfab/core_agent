@@ -9,6 +9,8 @@ else
     F_NM=false
 fi
 
+sudo apt install bc -y
+
 if [ $F_NM == true ]; then
     if [[ $(echo "$OS_VERSION_NUM >= 12.0" | bc) -eq 1 ]]; then
         echo "OS version is equal or greater than 12"
