@@ -27,7 +27,9 @@ execute_fix("301021-install-route", r'while :;do command -v route;if [ $? -eq "0
 execute_fix("301021-install-lshw", r'while :;do command -v lshw;if [ $? -eq "0" ];then sudo systemctl restart core_manager;break;fi;sudo apt-get install lshw -y;done')
 execute_fix("281221-env-file-permission", r'sudo chown -R sixfab:sixfab /opt/sixfab/.env.yaml')
 execute_fix("131023-bookworm-virtual-env-fix", r'sudo bash /opt/sixfab/core/agent/core/modules/fixes/131023-bookworm-virtual-env-fix.sh')
-execute_fix("261123-network-manager-wwan-bug-fix", r'sudo bash /opt/sixfab/core/agent/core/modules/fixes/261123-network-manager-wwan-bug-fix.sh')
+
+# execute_fix("261123-network-manager-wwan-bug-fix", r'sudo bash /opt/sixfab/core/agent/core/modules/fixes/261123-network-manager-wwan-bug-fix.sh')
+execute_fix("111223-telit-wwan-bug-dhcpcd-fix", r'sudo bash /opt/sixfab/core/agent/core/modules/fixes/111223-telit-wwan-bug-dhcpcd-fix.sh')
 
 # Check modemmanager existance for each restart of service and remove it if exist
 execute_fix("121023-modemmanager", r'sudo apt purge modemmanager -y', retry=True)
